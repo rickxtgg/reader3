@@ -1,88 +1,377 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ book.metadata.title }}</title>
+    <!-- 可爱/艺术字体 & 英文字体（优先国内镜像，减少被墙风险；附加 fallback） -->
+    <link rel="preconnect" href="https://fonts.loli.net">
+    <link rel="preconnect" href="https://fonts.gstatic.loli.net" crossorigin>
+    <link href="https://fonts.loli.net/css2?family=Ma+Shan+Zheng&family=ZCOOL+KuaiLe&family=ZCOOL+XiaoWei&family=ZCOOL+QingKe+HuangYou&family=Zhi+Mang+Xing&family=Long+Cang&family=Liu+Jian+Mao+Cao&family=Noto+Serif+SC:wght@400;500&family=Noto+Serif+TC:wght@400;500&family=Noto+Sans+SC:wght@400;500&family=Noto+Sans+TC:wght@400;500&family=Lobster&family=Pacifico&family=Dancing+Script:wght@400;600&family=Playfair+Display:wght@400;600&family=Great+Vibes&display=swap" rel="stylesheet">
+    <!-- 次选：直接使用 gfonts 以防止部分地区 fonts.loli.net 不可用（异步加载，不阻塞首屏） -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <!-- 备用国内镜像（font.im），仅加载繁体所需 Noto Serif TC -->
     <style>
-        /* Layout */
-        body { margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; font-family: "Georgia", serif; background: #fff; }
+        :root {
+            /* 默认主题（亮色） */
+            --bg-color: #ffffff;
+            --text-color: #212529;
+            --sidebar-bg: #f8f9fa;
+            --sidebar-border: #e9ecef;
+            --header-color: #495057;
+            --link-color: #3498db;
+            --link-active: #d63384;
+            --toolbar-bg: rgba(255,255,255,0.95);
+            --btn-bg: #f0f0f0;
+            --btn-hover: #e0e0e0;
+            --border-color: #dee2e6;
+            --muted-color: #999;
+        }
+        
+        /* 护眼模式（暖色调） */
+        .theme-eye-care {
+            --bg-color: #f5f0e6;
+            --text-color: #3d3929;
+            --sidebar-bg: #ebe5d8;
+            --sidebar-border: #d8d0c0;
+            --header-color: #5a5344;
+            --link-color: #7a6b4e;
+            --link-active: #8b4513;
+            --toolbar-bg: rgba(245,240,230,0.95);
+            --btn-bg: #e8e0d0;
+            --btn-hover: #ddd5c5;
+            --border-color: #d0c8b8;
+            --muted-color: #8a8070;
+        }
+        
+        /* 深色模式 */
+        .theme-dark {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --sidebar-bg: #252525;
+            --sidebar-border: #333;
+            --header-color: #ccc;
+        }
+        
+        /* 可爱粉色模式 */
+        .theme-cute {
+            --bg-color: #fff5f8;
+            --text-color: #5d4954;
+            --sidebar-bg: #ffe4ec;
+            --sidebar-border: #ffc8d8;
+            --header-color: #d4618c;
+            --muted-color: #c4899d;
+            --toolbar-bg: #fff0f5;
+            --border-color: #ffd4e0;
+        }
+        .theme-cute .content-area { font-family: 'ZCOOL KuaiLe', 'Ma Shan Zheng', 'Noto Sans SC', sans-serif; }
+        .theme-cute .nav-button { background: linear-gradient(135deg, #ffb6c1, #ff91a4); color: white; }
+        .theme-cute .nav-button:hover { background: linear-gradient(135deg, #ff91a4, #ff6b8a); }
+        
+        /* 小清新绿色模式 */
+        .theme-fresh {
+            --bg-color: #f0f9f4;
+            --text-color: #3d5a4c;
+            --sidebar-bg: #e0f2e8;
+            --sidebar-border: #b8dcc8;
+            --header-color: #4a8c6a;
+            --muted-color: #7fb89a;
+            --toolbar-bg: #e8f6ee;
+            --border-color: #c5e5d4;
+        }
+        .theme-fresh .content-area { font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif; }
+        .theme-fresh .nav-button { background: linear-gradient(135deg, #8bc6a8, #6ab492); color: white; }
+        .theme-fresh .nav-button:hover { background: linear-gradient(135deg, #6ab492, #5aa882); }
+        
+        /* 薰衣草紫色模式 */
+        .theme-lavender {
+            --bg-color: #f8f5ff;
+            --text-color: #4a4260;
+            --sidebar-bg: #ede5ff;
+            --sidebar-border: #d4c8f0;
+            --header-color: #7c6aa8;
+            --muted-color: #9d8dc4;
+            --toolbar-bg: #f2ecff;
+            --border-color: #ddd0f5;
+            --link-color: #9b7fd4;
+            --link-active: #c77dff;
+        }
+        .theme-lavender .content-area { font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif; }
+        .theme-lavender .nav-button { background: linear-gradient(135deg, #a18cd1, #c77dff); color: white; }
+        .theme-lavender .nav-button:hover { background: linear-gradient(135deg, #9b7fd4, #b56eff); }
 
-        /* Sidebar */
-        #sidebar { width: 300px; background: #f8f9fa; border-right: 1px solid #e9ecef; overflow-y: auto; padding: 20px; flex-shrink: 0; }
-        .nav-header { font-family: -apple-system, sans-serif; font-weight: bold; color: #495057; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #dee2e6; }
-        .nav-home { display: block; margin-bottom: 20px; color: #3498db; text-decoration: none; font-family: -apple-system, sans-serif; font-size: 0.9em; }
+        /* 布局 */
+        body { 
+            margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; 
+            font-family: var(--content-font, "Georgia", serif); 
+            background: var(--bg-color); 
+            color: var(--text-color);
+            transition: background 0.3s, color 0.3s, font-family 0.2s;
+        }
+        /* 让主体与导航也使用选定字体 */
+        /* 全局字体应用到主要区域与控件 */
+        body,
+        .content-container,
+        .book-content,
+        .book-content * ,
+        .chapter-nav,
+        .chapter-nav .nav-btn,
+        #sidebar,
+        #sidebar * ,
+        .content-area,
+        .content-area * ,
+        button, input, select, textarea {
+            font-family: var(--content-font, "Georgia", serif) !important;
+        }
 
-        /* TOC Tree */
+        /* 背景图片层（半透明，不影响文字） */
+        .bg-image-layer {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: cover;
+            opacity: var(--bg-image-opacity, 0.2);
+            filter: saturate(0.9) brightness(0.95);
+        }
+
+        /* 侧边栏 */
+        #sidebar { 
+            width: 300px; 
+            background: var(--sidebar-bg); 
+            border-right: 1px solid var(--sidebar-border); 
+            overflow-y: auto; padding: 20px; flex-shrink: 0;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .nav-header { 
+            font-family: -apple-system, sans-serif; font-weight: bold; 
+            color: var(--header-color); 
+            margin-bottom: 15px; padding-bottom: 10px; 
+            border-bottom: 1px solid var(--border-color); 
+        }
+        .nav-home { 
+            display: block; margin-bottom: 20px; 
+            color: var(--link-color); 
+            text-decoration: none; font-family: -apple-system, sans-serif; font-size: 0.9em; 
+        }
+
+        /* 目录树 */
         ul.toc-list { list-style: none; padding-left: 0; margin: 0; }
-        ul.toc-list ul { padding-left: 20px; } /* Indent children */
+        ul.toc-list ul { padding-left: 20px; }
         li.toc-item { margin-bottom: 8px; }
-        a.toc-link { text-decoration: none; color: #495057; font-size: 0.95em; display: block; padding: 4px 0; line-height: 1.4; }
-        a.toc-link:hover { color: #000; text-decoration: underline; }
-        a.toc-link.active { color: #d63384; font-weight: bold; }
+        a.toc-link { 
+            text-decoration: none; 
+            color: var(--header-color); 
+            font-size: 0.95em; display: block; padding: 4px 0; line-height: 1.4; 
+        }
+        a.toc-link:hover { color: var(--text-color); text-decoration: underline; }
+        a.toc-link.active { color: var(--link-active); font-weight: bold; }
 
-        /* Main Content */
-        #main { flex-grow: 1; overflow-y: auto; position: relative; scroll-behavior: smooth; }
-        .content-container { max-width: 700px; margin: 0 auto; padding: 60px 40px; line-height: 1.8; font-size: 1.15em; color: #212529; }
+        /* 主内容区 */
+        #main { 
+            flex-grow: 1; overflow-y: auto; position: relative; scroll-behavior: smooth; 
+            background: var(--bg-color);
+        }
+        .content-container { 
+            max-width: 700px; margin: 0 auto; padding: 60px 40px; 
+            line-height: 1.8; font-size: 1.15em; 
+            color: var(--text-color); 
+        }
 
-        /* Content Styling (Basic normalization for the book HTML) */
+        /* 内容样式 */
         .book-content img { max-width: 100%; height: auto; display: block; margin: 20px auto; }
-        .book-content h1, .book-content h2, .book-content h3 { font-family: -apple-system, sans-serif; margin-top: 1.5em; color: #333; }
+        .book-content h1, .book-content h2, .book-content h3 { 
+            font-family: -apple-system, sans-serif; margin-top: 1.5em; 
+            color: var(--header-color); 
+        }
         .book-content p { margin-bottom: 1.5em; text-align: justify; }
 
-        /* Navigation Footer */
-        .chapter-nav { display: flex; justify-content: space-between; margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; font-family: -apple-system, sans-serif; }
-        .nav-btn { text-decoration: none; color: #3498db; font-weight: bold; padding: 10px 20px; border: 1px solid #3498db; border-radius: 4px; transition: all 0.2s; }
-        .nav-btn:hover { background: #3498db; color: white; }
-        .nav-btn.disabled { opacity: 0.5; pointer-events: none; border-color: #ccc; color: #ccc; }
+        /* 底部导航 */
+        .chapter-nav { 
+            display: flex; justify-content: space-between; margin-top: 60px; padding-top: 20px; 
+            border-top: 1px solid var(--border-color); 
+            font-family: -apple-system, sans-serif; 
+        }
+        .nav-btn { 
+            text-decoration: none; 
+            color: var(--link-color); 
+            font-weight: bold; padding: 10px 20px; 
+            border: 1px solid var(--link-color); 
+            border-radius: 4px; transition: all 0.2s; 
+        }
+        .nav-btn:hover { background: var(--link-color); color: white; }
+        .nav-btn.disabled { opacity: 0.5; pointer-events: none; border-color: var(--muted-color); color: var(--muted-color); }
+
+        /* 工具栏 */
+        .toolbar { 
+            position: fixed; top: 15px; right: 20px; 
+            display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+            font-family: -apple-system, sans-serif; font-size: 0.85em; 
+            background: var(--toolbar-bg); 
+            padding: 8px 12px; border-radius: 6px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 100; 
+            max-width: 500px;
+            transition: background 0.3s;
+        }
+        .toolbar-group {
+            display: flex; gap: 6px; align-items: center;
+            padding-right: 10px;
+            border-right: 1px solid var(--border-color);
+        }
+        .toolbar-group:last-child { border-right: none; padding-right: 0; }
+        .toolbar button { 
+            background: var(--btn-bg); 
+            border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 1em;
+            color: var(--text-color);
+            transition: background 0.2s;
+        }
+        .toolbar button:hover { background: var(--btn-hover); }
+        .toolbar button.active { background: var(--link-color); color: white; }
+        .toolbar .font-size-display { min-width: 40px; text-align: center; color: var(--muted-color); }
+        .toolbar select {
+            background: var(--btn-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 4px 8px;
+            color: var(--text-color);
+            font-size: 0.9em;
+        }
+
+        /* TTS 控制面板 */
+        .tts-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--toolbar-bg);
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 480px;
+            max-width: 520px;
+            z-index: 100;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .tts-panel.visible { display: flex; }
+        .tts-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            color: var(--header-color);
+        }
+        .tts-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .tts-progress {
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .tts-progress-bar {
+            height: 100%;
+            background: var(--link-color);
+            width: 0%;
+        }
+        .tts-settings {
+            border-top: 1px solid var(--border-color);
+            padding-top: 10px;
+            margin-top: 5px;
+        }
+        .tts-settings-title {
+            font-size: 0.9em;
+            color: var(--muted-color);
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+        .tts-settings-title:hover { color: var(--text-color); }
+        .tts-settings-content {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .tts-settings-content.visible { display: flex; }
+        .tts-setting-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+        }
+        .tts-setting-row label {
+            min-width: 60px;
+            color: var(--muted-color);
+        }
+        .tts-setting-row input, .tts-setting-row select {
+            flex: 1;
+            padding: 4px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--btn-bg);
+            color: var(--text-color);
+            font-size: 0.9em;
+        }
+        .tts-setting-row input[type="range"] {
+            flex: 1;
+            transition: width 0.3s;
+        }
+        .tts-status {
+            font-size: 0.85em;
+            color: var(--muted-color);
+        }
 
     </style>
 </head>
 <body>
 
-    <!-- SIDEBAR -->
+    <!-- 侧边栏 -->
     <div id="sidebar">
-        <a href="/" class="nav-home">← Back to Library</a>
+        <a href="/" class="nav-home">← 返回书库</a>
         <div class="nav-header">{{ book.metadata.title }}</div>
 
-        <!-- Recursive Macro for TOC -->
         {% macro render_toc(items) %}
             <ul class="toc-list">
             {% for item in items %}
                 <li class="toc-item">
                     <!--
-                        Matching Logic:
-                        If the TOC item filename matches the current chapter filename, mark active.
-                        Ideally we match spine indices, but Reader 3 TOC maps to filenames.
-                        We use a simple hash matching logic here.
+                        匹配逻辑：
+                        如果目录项文件名与当前章节文件名匹配，则标记为激活状态。
+                        理想情况下应该匹配 spine 索引，但 Reader 3 的目录映射到文件名。
+                        这里使用简单的文件名匹配逻辑。
                     -->
                     {% set is_active = current_chapter.href == item.file_href %}
 
                     <!--
-                       We need to find which linear chapter index (0, 1, 2) corresponds
-                       to this TOC entry file.
-                       Since that's hard to calculate in Jinja, we just link to the
-                       file anchor. BUT, to make our linear navigation work, we
-                       rely on the fact that the user is currently reading 'chapter_index'.
+                       我们需要找出哪个线性章节索引（0, 1, 2）对应这个目录条目文件。
+                       由于在 Jinja 中难以计算，我们只链接到文件锚点。
+                       但为了使线性导航正常工作，我们依赖用户当前阅读的 'chapter_index'。
 
-                       Ideally, clicking a TOC link should find the 'index' of that file.
-                       For simplicity in this version: We link to the 'href' (filename)
-                       and let JavaScript or Backend handle it?
+                       理想情况下，点击目录链接应该找到该文件的索引。
+                       在这个简化版本中：我们链接到 'href'（文件名），
+                       让 JavaScript 或后端处理。
 
-                       Actually, let's just link to the file. The browser interprets #anchors.
-                       However, our router uses /read/book/INDEX.
+                       实际上，让我们直接链接到文件。浏览器会解释 #锚点。
+                       但是，我们的路由使用 /read/book/INDEX 格式。
 
-                       SIMPLE FIX: We won't link the TOC to the route index in this simple version
-                       unless we build a map. We will visually show structure,
-                       but rely on "Previous/Next" for linear reading.
+                       简单方案：在这个简化版本中，除非构建映射表，否则不将目录链接到路由索引。
+                       我们只显示结构，依赖"上一章/下一章"进行线性阅读。
 
-                       BETTER FIX: Use JavaScript to match filenames.
+                       更好的方案：使用 JavaScript 匹配文件名。
                     -->
-                    <a href="#" onclick="findAndGo('{{ item.file_href }}')"
+                    <a href="#" onclick="findAndGo('{{ item.file_href }}'); return false;"
                        class="toc-link {% if is_active %}active{% endif %}">
                         {{ item.title }}
                     </a>
-
                     {% if item.children %}
                         {{ render_toc(item.children) }}
                     {% endif %}
@@ -94,61 +383,3538 @@
         {{ render_toc(book.toc) }}
     </div>
 
-    <!-- MAIN CONTENT -->
-    <div id="main">
+    <!-- 工具栏 -->
+    <div class="toolbar">
+        <div class="toolbar-group">
+            <button onclick="adjustFont(-0.1)" title="减小字号">A-</button>
+            <span id="font-size-display" class="font-size-display">115%</span>
+            <button onclick="adjustFont(0.1)" title="增大字号">A+</button>
+        </div>
+        <div class="toolbar-group">
+            <button id="btn-theme-light" onclick="setTheme('light')" title="亮色模式">☀️</button>
+            <button id="btn-theme-eye" onclick="setTheme('eye-care')" title="护眼模式">🌿</button>
+            <button id="btn-theme-dark" onclick="setTheme('dark')" title="深色模式">🌙</button>
+            <button id="btn-theme-cute" onclick="setTheme('cute')" title="可爱粉">🌸</button>
+            <button id="btn-theme-fresh" onclick="setTheme('fresh')" title="小清新">🍃</button>
+            <button id="btn-theme-lavender" onclick="setTheme('lavender')" title="薰衣草">💜</button>
+        </div>
+        <div class="toolbar-group">
+            <label for="font-select" style="font-size:0.85em;color:var(--muted-color)">字体</label>
+            <select id="font-select" onchange="setFont(this.value)" style="padding:6px;border-radius:6px;border:1px solid var(--border-color);">
+                <option value="serif">默认衬线 (Georgia)</option>
+                <option value="songti">宋体 (SimSun)</option>
+                <option value="nsongti">新宋体 (NSimSun)</option>
+                <option value="songti_sc">宋体（macOS 简体）(Songti SC)</option>
+                <option value="songti_tc">宋体（macOS 繁体）(Songti TC)</option>
+                <option value="mingliu">明體 (MingLiU)</option>
+                <option value="pmingliu">新細明體 (PMingLiU)</option>
+                <option value="notoserif">思源宋体简 (Noto Serif SC)</option>
+                <option value="notoseriftc">思源宋体繁 (Noto Serif TC)</option>
+                <option value="trad">繁体书面 (Noto Serif TC)</option>
+                <option value="heiti">黑体 (SimHei)</option>
+                <option value="yahei">微软雅黑 (Microsoft YaHei)</option>
+                <option value="notosanssc">思源黑体简 (Noto Sans SC)</option>
+                <option value="notosanstc">思源黑体繁 (Noto Sans TC)</option>
+                <option value="kuaile">站酷快乐体 (ZCOOL KuaiLe)</option>
+                <option value="mashan">马善政手写 (Ma Shan Zheng)</option>
+                <option value="caoshu">草书 (Liu Jian Mao Cao)</option>
+                <option value="lishu">隶书 (LiSu)</option>
+                <option value="xingkai">行楷 (Zhi Mang Xing)</option>
+                <option value="kaiti">楷体 (KaiTi)</option>
+                <option value="fangsong">仿宋 (FangSong)</option>
+                <option value="xiaowei">站酷小薇体 (ZCOOL XiaoWei)</option>
+                <option value="qingke">站酷庆科黄油体 (ZCOOL QingKe HuangYou)</option>
+                <option value="lobster">Lobster（英文字体）</option>
+                <option value="pacifico">Pacifico（英文字体）</option>
+                <option value="dancing">Dancing Script（英文字体）</option>
+                <option value="playfair">Playfair Display（英文字体）</option>
+                <option value="greatvibes">Great Vibes（英文字体）</option>
+            </select>
+        </div>
+        <div class="toolbar-group">
+            <label for="bg-url" style="font-size:0.85em;color:var(--muted-color)">背景图</label>
+            <input id="bg-url" type="text" placeholder="输入背景图片URL" style="width:160px;padding:6px;border-radius:6px;border:1px solid var(--border-color);" onchange="setBgImage(this.value)">
+            <label style="font-size:0.85em;color:var(--muted-color)">透明度</label>
+            <input id="bg-opacity" type="range" min="0" max="0.6" step="0.05" value="0.2" onchange="setBgOpacity(this.value)" style="width:80px;">
+            <button onclick="clearBgImage()" title="清除背景图" style="padding:6px 10px;">✕</button>
+        </div>
+        <div class="toolbar-group">
+            <button id="btn-tts" onclick="toggleTTSPanel()" title="朗读">🔊</button>
+            <select id="tts-engine" onchange="onTTSEngineChange()">
+                <option value="edge">微软TTS</option>
+                <option value="gptsovits">GPT-SoVITS</option>
+                <option value="indextts">Index-TTS</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- TTS 控制面板 -->
+    <div id="tts-panel" class="tts-panel">
+        <div class="tts-panel-header">
+            <span>🔊 朗读控制</span>
+            <button onclick="toggleTTSPanel()" style="background:none;border:none;cursor:pointer;font-size:1.2em;">✕</button>
+        </div>
+        <div class="tts-controls">
+            <button id="tts-play" onclick="ttsPlay()">▶️ 播放</button>
+            <button id="tts-pause" onclick="ttsPause()" style="display:none;">⏸️ 暂停</button>
+            <button onclick="ttsStop()">⏹️ 停止</button>
+            <button onclick="clearTTSCache()" title="清除所有TTS音频缓存">🗑️ 清缓存</button>
+        </div>
+        <div class="tts-progress">
+            <div id="tts-progress-bar" class="tts-progress-bar"></div>
+        </div>
+        <div id="tts-status" class="tts-status">就绪</div>
+        
+        <!-- TTS 设置 -->
+        <div class="tts-settings">
+            <div class="tts-settings-title" onclick="toggleTTSSettings()">
+                ⚙️ 朗读设置 <span id="tts-settings-arrow">▼</span>
+            </div>
+            <div id="tts-settings-content" class="tts-settings-content">
+                <!-- 通用设置 -->
+                <div class="tts-setting-row">
+                    <label>
+                        <input type="checkbox" id="tts-auto-advance" checked onchange="saveTTSSettings()"> 自动翻页
+                    </label>
+                    <label style="margin-left:10px;" title="跳过目录章节">
+                        <input type="checkbox" id="tts-skip-toc" checked onchange="saveTTSSettings()"> 跳过目录
+                    </label>
+                    <label style="margin-left:10px;" title="跳过版权信息章节">
+                        <input type="checkbox" id="tts-skip-copyright" checked onchange="saveTTSSettings()"> 跳过版权
+                    </label>
+                </div>
+                <div class="tts-setting-row">
+                    <label>预加载段数</label>
+                    <input type="number" id="tts-preload-count" value="-1" step="1" style="width:80px;" onchange="updatePreloadCount(true); saveTTSSettings();">
+                    <span style="font-size:0.8em;color:var(--muted-color)">-1 不限制，其余为预加载段数</span>
+                </div>
+                <div class="tts-setting-row" style="flex-wrap:wrap;gap:6px;align-items:center;">
+                    <label>本地缓存上限</label>
+                    <input type="number" id="tts-preload-max-items" value="300" step="10" style="width:80px;">
+                    <label style="margin-left:8px;">容量(MB)</label>
+                    <input type="number" id="tts-preload-max-mb" value="512" step="64" style="width:80px;">
+                    <button onclick="applyPreloadLimits()" style="font-size:0.8em;padding:4px 8px;">应用</button>
+                    <button onclick="showLocalPreloadStats()" style="font-size:0.8em;padding:4px 8px;">统计</button>
+                    <button onclick="clearLocalPreloadCache()" style="font-size:0.8em;padding:4px 8px;">清本地缓存</button>
+                    <select id="tts-preload-filter" style="margin-left:8px;">
+                        <option value="all">全部</option>
+                        <option value="book">当前书籍</option>
+                        <option value="engine">当前引擎</option>
+                        <option value="book_engine">当前书籍+引擎</option>
+                    </select>
+                    <button onclick="showFilteredPreloadStats()" style="font-size:0.8em;padding:4px 8px;">统计过滤</button>
+                    <button onclick="clearFilteredPreloadCache()" style="font-size:0.8em;padding:4px 8px;">清过滤</button>
+                    <button onclick="openPreloadDetailPanel()" style="font-size:0.8em;padding:4px 8px;">明细</button>
+                </div>
+                <div id="preload-detail" style="display:none;margin-top:8px;border-top:1px solid var(--border-color);padding-top:8px;max-height:220px;overflow:auto;"></div>
+                <!-- Edge TTS 设置 -->
+                <div id="edge-settings" class="tts-engine-settings">
+                    <div class="tts-setting-row">
+                        <label>语音</label>
+                        <select id="edge-voice" onchange="saveTTSSettings()" style="flex:1;">
+                            <optgroup label="中文（普通话）">
+                                <option value="zh-CN-XiaoxiaoNeural">晓晓 - 女声，温暖亲切</option>
+                                <option value="zh-CN-XiaoyiNeural">晓伊 - 女声，活泼可爱</option>
+                                <option value="zh-CN-XiaochenNeural">晓辰 - 女声，知性优雅</option>
+                                <option value="zh-CN-XiaohanNeural">晓涵 - 女声，温柔甜美</option>
+                                <option value="zh-CN-XiaomengNeural">晓梦 - 女声，清新自然</option>
+                                <option value="zh-CN-XiaomoNeural">晓墨 - 女声，沉稳大气</option>
+                                <option value="zh-CN-XiaoqiuNeural">晓秋 - 女声，成熟稳重</option>
+                                <option value="zh-CN-XiaoruiNeural">晓睿 - 女声，专业播报</option>
+                                <option value="zh-CN-XiaoshuangNeural">晓双 - 童声，活泼天真</option>
+                                <option value="zh-CN-XiaoxuanNeural">晓萱 - 女声，甜美可爱</option>
+                                <option value="zh-CN-XiaoyanNeural">晓颜 - 女声，端庄优雅</option>
+                                <option value="zh-CN-XiaoyouNeural">晓悠 - 童声，可爱童趣</option>
+                                <option value="zh-CN-XiaozhenNeural">晓甄 - 女声，新闻播报</option>
+                                <option value="zh-CN-YunfengNeural">云枫 - 男声，浑厚有力</option>
+                                <option value="zh-CN-YunhaoNeural">云皓 - 男声，阳光活力</option>
+                                <option value="zh-CN-YunjianNeural">云健 - 男声，运动解说</option>
+                                <option value="zh-CN-YunxiNeural">云希 - 男声，叙事朗读</option>
+                                <option value="zh-CN-YunxiaNeural">云夏 - 男声，少年清澈</option>
+                                <option value="zh-CN-YunyangNeural">云扬 - 男声，新闻播报</option>
+                                <option value="zh-CN-YunyeNeural">云野 - 男声，故事讲述</option>
+                                <option value="zh-CN-YunzeNeural">云泽 - 男声，纪录片风</option>
+                            </optgroup>
+                            <optgroup label="中文（台湾）">
+                                <option value="zh-TW-HsiaoChenNeural">曉臻 - 女声</option>
+                                <option value="zh-TW-HsiaoYuNeural">曉雨 - 女声</option>
+                                <option value="zh-TW-YunJheNeural">雲哲 - 男声</option>
+                            </optgroup>
+                            <optgroup label="中文（香港）">
+                                <option value="zh-HK-HiuGaaiNeural">曉佳 - 女声</option>
+                                <option value="zh-HK-HiuMaanNeural">曉曼 - 女声</option>
+                                <option value="zh-HK-WanLungNeural">雲龍 - 男声</option>
+                            </optgroup>
+                            <optgroup label="English">
+                                <option value="en-US-JennyNeural">Jenny - Female</option>
+                                <option value="en-US-GuyNeural">Guy - Male</option>
+                                <option value="en-US-AriaNeural">Aria - Female</option>
+                                <option value="en-GB-SoniaNeural">Sonia - Female (UK)</option>
+                            </optgroup>
+                            <optgroup label="日本語">
+                                <option value="ja-JP-NanamiNeural">七海 - 女声</option>
+                                <option value="ja-JP-KeitaNeural">圭太 - 男声</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="tts-setting-row">
+                        <label>语速</label>
+                        <input type="range" id="edge-rate" min="-50" max="200" value="0" 
+                               oninput="updateEdgeRateDisplay()" onchange="saveTTSSettings()">
+                        <span id="edge-rate-value" style="min-width:50px;text-align:right;">0%</span>
+                    </div>
+                    <div class="tts-setting-row">
+                        <label>音量</label>
+                        <input type="range" id="edge-volume" min="-50" max="50" value="0" 
+                               oninput="updateEdgeVolumeDisplay()" onchange="saveTTSSettings()">
+                        <span id="edge-volume-value" style="min-width:50px;text-align:right;">0%</span>
+                    </div>
+                    <div class="tts-setting-row">
+                        <label>音调</label>
+                        <input type="range" id="edge-pitch" min="-50" max="50" value="0" 
+                               oninput="updateEdgePitchDisplay()" onchange="saveTTSSettings()">
+                        <span id="edge-pitch-value" style="min-width:50px;text-align:right;">0Hz</span>
+                    </div>
+                    <div class="tts-setting-row" style="margin-top:5px;">
+                        <button onclick="resetEdgeSettings()" style="font-size:0.8em;padding:4px 8px;">
+                            重置为默认
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- GPT-SoVITS 设置 -->
+                <div id="gptsovits-settings" class="tts-engine-settings" style="display:none;">
+                    <!-- 基本设置 -->
+                    <div class="tts-setting-row">
+                        <label>API地址</label>
+                        <input type="text" id="gptsovits-url" value="http://127.0.0.1:9880" onchange="saveTTSSettings()" style="flex:1;">
+                    </div>
+                    <div class="tts-setting-row">
+                        <label>请求方式</label>
+                        <select id="gptsovits-method" onchange="saveTTSSettings()" style="width:auto;">
+                            <option value="POST">POST</option>
+                            <option value="GET">GET</option>
+                        </select>
+                        <label style="margin-left:15px;" title="流式模式可更快开始播放">
+                            <input type="checkbox" id="gptsovits-streaming" onchange="saveTTSSettings()" checked> 流式
+                        </label>
+                    </div>
+                    
+                    <!-- 参考音频设置 -->
+                    <div class="tts-setting-row" style="flex-wrap:wrap;">
+                        <label>参考音频</label>
+                        <input type="text" id="gptsovits-ref" placeholder="音频文件路径" onchange="saveTTSSettings()" style="flex:1;min-width:150px;">
+                    </div>
+                    <div class="tts-setting-row" style="flex-wrap:wrap;gap:6px;">
+                        <button onclick="browseRefAudioFile()" style="font-size:0.8em;padding:4px 8px;">📁 选择文件</button>
+                        <button onclick="browseRefAudioDir()" style="font-size:0.8em;padding:4px 8px;">📂 选择目录</button>
+                        <button onclick="saveCurrentRefToSaved()" style="font-size:0.8em;padding:4px 8px;">💾 加入列表</button>
+                        <button onclick="deleteSelectedSavedRef()" style="font-size:0.8em;padding:4px 8px;">🗑 删除选中</button>
+                        <select id="gptsovits-ref-list" onchange="selectRefAudio(this.value)" style="flex:1;display:none;min-width:160px;">
+                            <option value="">-- 选择参考音频 --</option>
+                        </select>
+                    </div>
+                    <div class="tts-setting-row">
+                        <label>参考文本</label>
+                        <input type="text" id="gptsovits-prompt" placeholder="参考音频的文本内容" onchange="saveTTSSettings()" style="flex:1;">
+                    </div>
+                    
+                    <!-- 版本和语言设置 -->
+                    <div class="tts-setting-row">
+                        <label>API版本</label>
+                        <select id="gptsovits-version" onchange="updateGPTSoVITSLangOptions(); saveTTSSettings()">
+                            <option value="v2">V2 (推荐)</option>
+                            <option value="v1">V1</option>
+                        </select>
+                    </div>
+                    <div class="tts-setting-row">
+                        <label>文本语言</label>
+                        <select id="gptsovits-text-lang" onchange="saveTTSSettings()" style="flex:1;">
+                            <!-- 由 updateGPTSoVITSLangOptions() 动态填充 -->
+                        </select>
+                    </div>
+                    <div class="tts-setting-row">
+                        <label>参考语言</label>
+                        <select id="gptsovits-prompt-lang" onchange="saveTTSSettings()" style="flex:1;">
+                            <!-- 由 updateGPTSoVITSLangOptions() 动态填充 -->
+                        </select>
+                    </div>
+                    
+                    <!-- 采样参数 -->
+                    <div class="tts-setting-row">
+                        <label>Top K</label>
+                        <input type="number" id="gptsovits-top-k" value="5" min="1" max="50" onchange="saveTTSSettings()" style="width:40px;">
+                        <label style="margin-left:8px;">Top P</label>
+                        <input type="number" id="gptsovits-top-p" value="1" min="0" max="1" step="0.1" onchange="saveTTSSettings()" style="width:40px;">
+                        <label style="margin-left:8px;">温度</label>
+                        <input type="number" id="gptsovits-temperature" value="1" min="0" max="2" step="0.1" onchange="saveTTSSettings()" style="width:40px;">
+                    </div>
+                    
+                    <!-- 文本分割 -->
+                    <div class="tts-setting-row">
+                        <label>文本分割</label>
+                        <select id="gptsovits-text-split" onchange="saveTTSSettings()">
+                            <option value="cut0">不分割</option>
+                            <option value="cut1">按4句分割</option>
+                            <option value="cut2">按50字分割</option>
+                            <option value="cut3">按中文句号分割</option>
+                            <option value="cut4">按英文句号分割</option>
+                            <option value="cut5" selected>按标点符号分割</option>
+                        </select>
+                    </div>
+                    
+                    <!-- 语速和其他 -->
+                    <div class="tts-setting-row">
+                        <label>语速</label>
+                        <input type="range" id="gptsovits-speed" min="0.5" max="2" step="0.05" value="1" 
+                               oninput="document.getElementById('gptsovits-speed-value').textContent=this.value+'x'" onchange="saveTTSSettings()">
+                        <span id="gptsovits-speed-value" style="min-width:40px;">1x</span>
+                    </div>
+                    <div class="tts-setting-row">
+                        <label>重复惩罚</label>
+                        <input type="number" id="gptsovits-repetition" value="1.35" min="1" max="2" step="0.05" onchange="saveTTSSettings()" style="width:60px;">
+                        <label style="margin-left:10px;">随机种子</label>
+                        <input type="number" id="gptsovits-seed" value="-1" onchange="saveTTSSettings()" style="width:60px;">
+                    </div>
+                    <div class="tts-setting-row">
+                        <label>
+                            <input type="checkbox" id="gptsovits-parallel" checked onchange="saveTTSSettings()"> 并行推理
+                        </label>
+                        <label style="margin-left:10px;">
+                            <input type="checkbox" id="gptsovits-split-bucket" checked onchange="saveTTSSettings()"> 分桶处理
+                        </label>
+                    </div>
+                    <div class="tts-setting-row">
+                        <label>批次大小</label>
+                        <input type="number" id="gptsovits-batch-size" value="1" min="1" max="10" onchange="saveTTSSettings()" style="width:50px;">
+                        <label style="margin-left:10px;">采样步数(V3)</label>
+                        <input type="number" id="gptsovits-sample-steps" value="32" min="1" max="100" onchange="saveTTSSettings()" style="width:50px;">
+                    </div>
+                    <!-- 模型切换 -->
+                    <div class="tts-setting-row" style="flex-wrap:wrap;gap:5px;">
+                        <label style="width:100%;">GPT 模型</label>
+                        <select id="gptsovits-gpt-preset" onchange="selectGPTPreset(this.value)" style="flex:1;">
+                            <option value="">-- 预设底模 --</option>
+                            <option value="GPT_SoVITS/pretrained_models/s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt">v2 底模</option>
+                            <option value="GPT_SoVITS/pretrained_models/s1v3.ckpt">v3 底模</option>
+                        </select>
+                        <select id="gptsovits-gpt-trained" onchange="selectGPTPreset(this.value)" style="flex:1;">
+                            <option value="">-- 训练模型 --</option>
+                            <!-- 由 loadTrainedModels() 动态填充 -->
+                        </select>
+                    </div>
+                    <div class="tts-setting-row" style="flex-wrap:wrap;gap:5px;">
+                        <input type="text" id="gptsovits-gpt-path" placeholder="GPT模型路径 (.ckpt)" style="flex:1;min-width:100px;" onchange="saveTTSSettings()">
+                        <button onclick="browseModelPath('gpt')" style="font-size:0.8em;padding:4px 8px;" title="粘贴模型路径">📁</button>
+                        <button onclick="setGPTWeights()" style="font-size:0.8em;padding:4px 8px;">切换</button>
+                    </div>
+                    <div class="tts-setting-row" style="flex-wrap:wrap;gap:5px;">
+                        <label style="width:100%;">SoVITS 模型</label>
+                        <select id="gptsovits-sovits-preset" onchange="selectSoVITSPreset(this.value)" style="flex:1;">
+                            <option value="">-- 预设底模 --</option>
+                            <option value="GPT_SoVITS/pretrained_models/s2G488k.pth">v2 底模</option>
+                            <option value="GPT_SoVITS/pretrained_models/v2Pro/s2Gv2Pro.pth">v2pro 底模</option>
+                            <option value="GPT_SoVITS/pretrained_models/v2Pro/s2Gv2ProPlus.pth">v2proplus 底模</option>
+                            <option value="GPT_SoVITS/pretrained_models/s2Gv3.pth">v3 底模</option>
+                            <option value="GPT_SoVITS/pretrained_models/gsv-v4-pretrained/s2Gv4.pth">v4 底模</option>
+                        </select>
+                        <select id="gptsovits-sovits-trained" onchange="selectSoVITSPreset(this.value)" style="flex:1;">
+                            <option value="">-- 训练模型 --</option>
+                            <!-- 由 loadTrainedModels() 动态填充 -->
+                        </select>
+                    </div>
+                    <div class="tts-setting-row" style="flex-wrap:wrap;gap:5px;">
+                        <input type="text" id="gptsovits-sovits-path" placeholder="SoVITS模型路径 (.pth)" style="flex:1;min-width:100px;" onchange="saveTTSSettings()">
+                        <button onclick="browseModelPath('sovits')" style="font-size:0.8em;padding:4px 8px;" title="粘贴模型路径">📁</button>
+                        <button onclick="setSoVITSWeights()" style="font-size:0.8em;padding:4px 8px;">切换</button>
+                    </div>
+                    <div class="tts-setting-row" style="flex-wrap:wrap;gap:5px;">
+                        <label style="width:100%;">模型扫描目录</label>
+                        <input type="text" id="gptsovits-model-dir" placeholder="GPT-SoVITS 工作目录" style="flex:1;min-width:100px;" onchange="saveTTSSettings()">
+                        <button onclick="browseModelDir()" style="font-size:0.8em;padding:4px 8px;" title="选择目录">📂</button>
+                        <button onclick="loadTrainedModels()" style="font-size:0.8em;padding:4px 8px;">🔄 刷新模型列表</button>
+                    </div>
+                    
+                    <!-- 服务控制 -->
+                    <div class="tts-setting-row">
+                        <label>服务控制</label>
+                        <button onclick="gptsovitsControl('restart')" style="font-size:0.8em;padding:4px 8px;">🔄 重启服务</button>
+                        <button onclick="gptsovitsControl('exit')" style="font-size:0.8em;padding:4px 8px;color:red;">⏹ 停止服务</button>
+                    </div>
+                    
+                    <div class="tts-setting-row">
+                        <button onclick="resetGPTSoVITSSettings()" style="font-size:0.8em;padding:4px 8px;">重置为默认</button>
+                    </div>
+                </div>
+                
+                <!-- Index-TTS 设置 -->
+                <div id="indextts-settings" class="tts-engine-settings" style="display:none;">
+                    <div class="tts-setting-row">
+                        <label>API地址</label>
+                        <input type="text" id="indextts-url" value="http://127.0.0.1:8080" onchange="saveTTSSettings()">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div id="main"
+         data-book-id="{{ book_id }}"
+         data-chapter-index="{{ chapter_index }}"
+         data-total-chapters="{{ book.spine|length }}"
+         data-current-href="{{ current_chapter.href }}"
+         data-spine-map='{ {% for ch in book.spine %}"{{ ch.href }}": {{ ch.order }}{% if not loop.last %}, {% endif %}{% endfor %} }'
+         data-tts-config='{{ tts_config | tojson | safe }}'>
         <div class="content-container">
-            <div class="book-content">
-                {{ current_chapter.content | safe }}
+            <div class="book-content" id="book-content">
+                {{ content_html | safe }}
             </div>
 
             <div class="chapter-nav">
                 {% if prev_idx is not none %}
-                    <a href="/read/{{ book_id }}/{{ prev_idx }}" class="nav-btn">← Previous</a>
+                    <a href="javascript:void(0)" onclick="goToPrevChapter()" class="nav-btn" data-prev-url="/read/{{ book_id }}/{{ prev_idx }}">← 上一章</a>
                 {% else %}
-                    <span class="nav-btn disabled">← Previous</span>
+                    <span class="nav-btn disabled">← 上一章</span>
                 {% endif %}
 
-                <span style="color: #999; padding: 10px;">
-                    Section {{ chapter_index + 1 }} of {{ book.spine|length }}
+                <span style="color: var(--muted-color); padding: 10px;">
+                    第 {{ chapter_index + 1 }} 节 / 共 {{ book.spine|length }} 节
                 </span>
 
                 {% if next_idx is not none %}
-                    <a href="/read/{{ book_id }}/{{ next_idx }}" class="nav-btn">Next →</a>
+                    <a href="javascript:void(0)" onclick="goToNextChapter()" class="nav-btn" data-next-url="/read/{{ book_id }}/{{ next_idx }}">下一章 →</a>
                 {% else %}
-                    <span class="nav-btn disabled">Next →</span>
+                    <span class="nav-btn disabled">下一章 →</span>
                 {% endif %}
             </div>
         </div>
     </div>
 
     <script>
-        // Helper to map TOC filenames to Spine Indices
-        // Pass the spine data from python to JS
-        const spineMap = {
-            {% for ch in book.spine %}
-            "{{ ch.href }}": {{ ch.order }},
-            {% endfor %}
+        // === 从 data 属性读取配置 ===
+        const mainEl = document.getElementById('main');
+        const BOOK_ID = mainEl.dataset.bookId;
+        window.__deferredImageRewrite = BOOK_ID;
+        window.TTS_PARAGRAPH_SELECTORS = window.TTS_PARAGRAPH_SELECTORS || 'p, div, h1, h2, h3, h4, h5, h6, li, blockquote, td, th';
+        const CHAPTER_INDEX = parseInt(mainEl.dataset.chapterIndex, 10);
+        const TOTAL_CHAPTERS = parseInt(mainEl.dataset.totalChapters, 10);
+        const STORAGE_KEY = 'reader3_' + BOOK_ID;
+        const CURRENT_HREF = mainEl.dataset.currentHref;
+        const spineMap = JSON.parse(mainEl.dataset.spineMap);
+        const urlParams = new URLSearchParams(window.location.search);
+        const IS_AUTOPLAY_JUMP = urlParams.get('autoplay') === '1';
+        const RESUME_PARAM = urlParams.get('para');
+        const SKIP_RESUME_PROMPT = IS_AUTOPLAY_JUMP || urlParams.get('resume') === '1';
+        const SERVER_TTS_CONFIG = JSON.parse(mainEl.dataset.ttsConfig || '{}');
+        const SERVER_PRELOAD_DEFAULT = SERVER_TTS_CONFIG?.preload_count ?? -1;
+        const SERVER_SAVED_REFS = SERVER_TTS_CONFIG?.saved_refs ?? [];
+
+        // === 主题与字体切换 ===
+        const THEME_KEY = 'reader3_theme';
+        const FONT_KEY = 'reader3_font';
+        const FONT_MAP = {
+            // 宋体类（衬线体）
+            'serif': '"Georgia"',
+            'songti': '"SimSun"',
+            'nsongti': '"NSimSun"',
+            'songti_sc': '"Songti SC"',
+            'songti_tc': '"Songti TC"',
+            'mingliu': '"MingLiU"',
+            'pmingliu': '"PMingLiU"',
+            'notoserif': '"Noto Serif SC"',
+            'notoseriftc': '"Noto Serif TC"',
+            'trad': '"Noto Serif TC"', // 繁体书面
+            // 黑体类（无衬线体）
+            'heiti': '"SimHei"',
+            'yahei': '"Microsoft YaHei"',
+            'notosanssc': '"Noto Sans SC"',
+            'notosanstc': '"Noto Sans TC"',
+            // 手写/书法字体
+            'kuaile': '"ZCOOL KuaiLe"',
+            'mashan': '"Ma Shan Zheng"',
+            'caoshu': '"Liu Jian Mao Cao"',
+            'lishu': '"LiSu"',
+            'xingkai': '"Zhi Mang Xing"',
+            // 其他中文字体
+            'kaiti': '"KaiTi"',
+            'fangsong': '"FangSong"',
+            'xiaowei': '"ZCOOL XiaoWei"',
+            'qingke': '"ZCOOL QingKe HuangYou"',
+            // 英文字体
+            'lobster': '"Lobster"',
+            'pacifico': '"Pacifico"',
+            'dancing': '"Dancing Script"',
+            'playfair': '"Playfair Display"',
+            'greatvibes': '"Great Vibes"'
         };
+        const BG_KEY = 'reader3_bg_image';
+        const BG_OPACITY_KEY = 'reader3_bg_opacity';
+        
+        function setTheme(theme) {
+            document.body.className = theme === 'light' ? '' : 'theme-' + theme;
+            localStorage.setItem(THEME_KEY, theme);
+            updateThemeButtons();
+        }
+        
+        function updateThemeButtons() {
+            const theme = localStorage.getItem(THEME_KEY) || 'light';
+            document.querySelectorAll('[id^="btn-theme-"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const activeBtn = document.getElementById('btn-theme-' + theme);
+            if (activeBtn) activeBtn.classList.add('active');
+        }
+        
+        function setFont(fontKey) {
+            const fontValue = FONT_MAP[fontKey] || FONT_MAP['serif'];
+            document.documentElement.style.setProperty('--content-font', fontValue);
+            const select = document.getElementById('font-select');
+            if (select && select.value !== fontKey) select.value = fontKey;
+            localStorage.setItem(FONT_KEY, fontKey);
+        }
 
+        function setBgImage(url) {
+            const layer = document.querySelector('.bg-image-layer');
+            if (!layer) return;
+            if (url && url.trim()) {
+                layer.style.backgroundImage = `url('${url.trim()}')`;
+                localStorage.setItem(BG_KEY, url.trim());
+            } else {
+                layer.style.backgroundImage = 'none';
+                localStorage.removeItem(BG_KEY);
+            }
+        }
+
+        function setBgOpacity(val) {
+            const layer = document.querySelector('.bg-image-layer');
+            if (!layer) return;
+            const v = Math.max(0, Math.min(0.6, parseFloat(val) || 0));
+            layer.style.opacity = v;
+            document.documentElement.style.setProperty('--bg-image-opacity', v);
+            localStorage.setItem(BG_OPACITY_KEY, v);
+            const slider = document.getElementById('bg-opacity');
+            if (slider && slider.value !== String(v)) slider.value = v;
+        }
+
+        function clearBgImage() {
+            setBgImage('');
+        }
+        
+        function restoreThemeAndFont() {
+            const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+            setTheme(savedTheme);
+            const savedFont = localStorage.getItem(FONT_KEY) || 'serif';
+            setFont(savedFont);
+            const savedBg = localStorage.getItem(BG_KEY) || '';
+            const savedOpacity = parseFloat(localStorage.getItem(BG_OPACITY_KEY)) || 0.2;
+            setBgImage(savedBg);
+            setBgOpacity(savedOpacity);
+            const bgInput = document.getElementById('bg-url');
+            if (bgInput && savedBg) bgInput.value = savedBg;
+        }
+        
+        // 恢复主题&字体
+        restoreThemeAndFont();
+
+        // === 阅读进度 ===
+        function saveProgress() {
+            const main = document.getElementById('main');
+            const scrollPercent = main.scrollTop / (main.scrollHeight - main.clientHeight) || 0;
+            const progress = {
+                chapter: CHAPTER_INDEX,
+                scroll: scrollPercent,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+        }
+
+        function restoreScroll() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+                if (saved && saved.chapter === CHAPTER_INDEX) {
+                    const main = document.getElementById('main');
+                    setTimeout(() => {
+                        main.scrollTop = saved.scroll * (main.scrollHeight - main.clientHeight);
+                    }, 100);
+                }
+            } catch (e) {}
+        }
+
+        // 滚动时保存进度（防抖）
+        let scrollTimeout;
+        document.getElementById('main').addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(saveProgress, 300);
+        });
+
+        // 页面加载时恢复滚动位置
+        restoreScroll();
+
+        // === 字号控制 ===
+        const FONT_SIZE_KEY = 'reader3_fontsize';
+        const contentEl = document.querySelector('.content-container');
+
+        function setFontSize(size) {
+            contentEl.style.fontSize = size + 'em';
+            localStorage.setItem(FONT_SIZE_KEY, size);
+            updateFontDisplay();
+        }
+
+        function updateFontDisplay() {
+            const current = parseFloat(localStorage.getItem(FONT_SIZE_KEY)) || 1.15;
+            document.getElementById('font-size-display').textContent = Math.round(current * 100) + '%';
+        }
+
+        function adjustFont(delta) {
+            const current = parseFloat(localStorage.getItem(FONT_SIZE_KEY)) || 1.15;
+            const newSize = Math.max(0.8, Math.min(2, current + delta));
+            setFontSize(newSize);
+        }
+
+        // 恢复字号设置
+        const savedFontSize = localStorage.getItem(FONT_SIZE_KEY);
+        if (savedFontSize) setFontSize(parseFloat(savedFontSize));
+        updateFontDisplay();
+
+        // === 键盘导航 ===
+        document.addEventListener('keydown', (e) => {
+            // 如果用户正在输入框中，忽略快捷键
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    if (CHAPTER_INDEX > 0) {
+                        goToPrevChapter();
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (CHAPTER_INDEX < TOTAL_CHAPTERS - 1) {
+                        goToNextChapter();
+                    }
+                    break;
+                case '+':
+                case '=':
+                    adjustFont(0.1);
+                    break;
+                case '-':
+                    adjustFont(-0.1);
+                    break;
+                case ' ':
+                    // 空格键切换播放/暂停
+                    if (globalAudioContext && globalAudioContext.state === 'running') {
+                        ttsPause();
+                    } else if (ttsParagraphs.length > 0) {
+                        ttsPlay();
+                    }
+                    e.preventDefault();
+                    break;
+            }
+        });
+
+        // === 目录导航 ===
         function findAndGo(filename) {
-            // The TOC usually has specific filenames e.g. "text/part001.html"
-            // Sometimes it has anchors "text/part001.html#header"
-            // We strip the anchor to find the page index
             const cleanFile = filename.split('#')[0];
-            const anchor = filename.split('#')[1];
-
+            const anchor = filename.includes('#') ? filename.split('#')[1] : '';
             const idx = spineMap[cleanFile];
 
             if (idx !== undefined) {
-                let url = "/read/{{ book_id }}/" + idx;
-                // If there was an anchor, we could try to scroll to it,
-                // but simple page loads often lose anchor position without extra JS.
-                // Let's just go to the page.
+                let url = '/read/' + BOOK_ID + '/' + idx;
+                if (anchor) {
+                    url += '#' + anchor;
+                }
                 window.location.href = url;
             } else {
-                console.log("Could not find index for", filename);
+                console.log("找不到对应的索引:", filename);
             }
         }
+
+        // === 拦截书籍内容中的链接点击 ===
+        function initContentLinks() {
+            const content = document.getElementById('book-content');
+            
+            content.addEventListener('click', function(e) {
+                // 查找被点击的链接
+                const link = e.target.closest('a');
+                if (!link) return;
+                
+                const href = link.getAttribute('href');
+                if (!href) return;
+                
+                // 忽略外部链接和 javascript 链接
+                if (href.startsWith('http://') || href.startsWith('https://') || 
+                    href.startsWith('mailto:') || href.startsWith('javascript:')) {
+                    return;
+                }
+                
+                // 处理锚点跳转（同页面内）
+                if (href.startsWith('#')) {
+                    const target = document.getElementById(href.substring(1));
+                    if (target) {
+                        e.preventDefault();
+                        target.scrollIntoView({ behavior: 'smooth' });
+                    }
+                    return;
+                }
+                
+                // 处理内部章节链接
+                e.preventDefault();
+                
+                // 提取文件名和锚点
+                let filename = href;
+                let anchor = '';
+                
+                if (href.includes('#')) {
+                    [filename, anchor] = href.split('#');
+                }
+                
+                // 移除路径前缀（如 ../text/）
+                filename = filename.split('/').pop();
+                
+                // 查找对应的章节索引
+                let targetIdx = spineMap[filename];
+                
+                // 如果直接匹配失败，尝试在 spineMap 中查找包含该文件名的键
+                if (targetIdx === undefined) {
+                    for (const [key, value] of Object.entries(spineMap)) {
+                        if (key.endsWith(filename) || key.includes(filename)) {
+                            targetIdx = value;
+                            break;
+                        }
+                    }
+                }
+                
+                if (targetIdx !== undefined) {
+                    let url = '/read/' + BOOK_ID + '/' + targetIdx;
+                    if (anchor) {
+                        url += '#' + anchor;
+                    }
+                window.location.href = url;
+            } else {
+                    console.log("无法解析链接:", href);
+                    // 如果实在找不到，显示提示
+                    alert('无法跳转到: ' + href);
+                }
+            });
+        }
+
+        // 初始化内容链接处理
+        initContentLinks();
+
+        // === TTS 朗读功能 ===
+        const TTS_ENGINE_KEY = 'reader3_tts_engine';
+        // 用 localStorage 控制“整本书籍只弹一次”
+        const RESUME_SHOWN_KEY = 'reader3_resume_shown_once_' + BOOK_ID;
+        let ttsParagraphs = [];
+        let ttsCurrentIndex = 0;
+        let ttsIsPlaying = false;
+        let ttsAutoAdvance = true;    // 朗读完自动翻页
+        let ttsSkipToc = true;        // 跳过目录章节
+        let ttsSkipCopyright = true;  // 跳过版权信息章节
+        let TTS_PRELOAD_COUNT = -1;   // 预加载数量，-1 表示不限制
+        window.ttsPlay = ttsPlay;
+        window.ttsPause = ttsPause;
+        window.ttsStop = ttsStop;
+        window.toggleTTSPanel = toggleTTSPanel;
+        window.onTTSEngineChange = onTTSEngineChange;
+
+        // 恢复 TTS 引擎设置
+        const savedEngine = localStorage.getItem(TTS_ENGINE_KEY) || 'edge';
+        document.getElementById('tts-engine').value = savedEngine;
+        updateEngineSettingsVisibility();
+
+        function onTTSEngineChange() {
+            try {
+                if (window.Settings && typeof Settings.onEngineChange === 'function') {
+                    Settings.onEngineChange();
+                    return;
+                }
+            } catch {}
+            try {
+                const engine = document.getElementById('tts-engine').value;
+                localStorage.setItem(TTS_ENGINE_KEY, engine);
+            } catch {}
+            updateEngineSettingsVisibility();
+            saveTTSSettings();
+        }
+
+        function toggleTTSPanel() {
+            const panel = document.getElementById('tts-panel');
+            panel.classList.toggle('visible');
+            
+            // 初始化段落列表
+            if (panel.classList.contains('visible') && ttsParagraphs.length === 0) {
+                initTTSParagraphs(true);
+            }
+            // 确保显示正确的引擎设置
+            updateEngineSettingsVisibility();
+            console.log('[TTS] panel visible:', panel.classList.contains('visible'));
+        }
+
+        // 需要跳过的元素选择器（注释、注脚、页码等非正文内容）
+        const TTS_SKIP_SELECTORS = [
+            'sup',                    // 上标（通常是注脚引用）
+            'sub',                    // 下标
+            '.footnote',              // 注脚
+            '.footnote-ref',          // 注脚引用
+            '.annotation',            // 注释
+            '.note',                  // 注释
+            '.endnote',               // 尾注
+            '.sidenote',              // 边注
+            'aside',                  // 旁注
+            'figcaption',             // 图片说明
+            '.caption',               // 说明文字
+            '.page-number',           // 页码
+            '.pagenum',               // 页码
+            '.calibre4',              // Calibre 注脚样式
+            '[role="doc-noteref"]',   // EPUB3 注脚引用
+            '[role="doc-footnote"]',  // EPUB3 注脚
+            '[role="doc-endnote"]',   // EPUB3 尾注
+            '[epub\\:type="noteref"]', // EPUB 注脚引用
+            '[epub\\:type="footnote"]', // EPUB 注脚
+            'rt',                     // Ruby 注音（日文等）
+            'rp',                     // Ruby 括号
+        ];
+
+        // 段落元素选择器
+        const TTS_PARAGRAPH_SELECTORS = 'p, div, h1, h2, h3, h4, h5, h6, li, blockquote, td, th';
+
+        function shouldSkipElement(element) {
+            // 检查元素或其祖先是否匹配跳过选择器
+            for (const selector of TTS_SKIP_SELECTORS) {
+                try {
+                    if (element.matches && element.matches(selector)) {
+                        return true;
+                    }
+                    if (element.closest && element.closest(selector)) {
+                        return true;
+                    }
+                } catch (e) {
+                    // 选择器语法错误时忽略
+                }
+            }
+            
+            // 特殊检查：包含 sup/sub 的链接（注脚链接）
+            if (element.tagName === 'A') {
+                if (element.querySelector('sup, sub, .calibre4')) {
+                    return true;
+                }
+                // 检查 href 是否指向注脚
+                const href = element.getAttribute('href') || '';
+                if (href.includes('#zhu') || href.includes('#note') || href.includes('#fn')) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        function cleanTextForTTS(text) {
+            // 清理文本中的注脚标记和多余空格
+            return text
+                .replace(/\[\d+\]/g, '')           // [1], [2] 等
+                .replace(/\(\d+\)/g, '')           // (1), (2) 等
+                .replace(/\*+/g, ' ')              // *, ** 等
+                .replace(/†+/g, ' ')               // †, †† 等
+                .replace(/‡+/g, ' ')               // ‡, ‡‡ 等
+                .replace(/\d+$/g, '')              // 结尾的数字
+                .replace(/[\r\n]+/g, ' ')          // 换行符替换为空格
+                .replace(/\s+/g, ' ')              // 合并多个空格为一个
+                // 日期格式转换：2017-11-01 -> 2017年11月1日
+                .replace(/(\d{4})-(\d{1,2})-(\d{1,2})/g, (match, year, month, day) => {
+                    return year + '年' + parseInt(month) + '月' + parseInt(day) + '日';
+                })
+                // 日期格式转换：2017/11/01 -> 2017年11月1日
+                .replace(/(\d{4})\/(\d{1,2})\/(\d{1,2})/g, (match, year, month, day) => {
+                    return year + '年' + parseInt(month) + '月' + parseInt(day) + '日';
+                })
+                // 日期格式转换：2017.11.01 -> 2017年11月1日
+                .replace(/(\d{4})\.(\d{1,2})\.(\d{1,2})/g, (match, year, month, day) => {
+                    return year + '年' + parseInt(month) + '月' + parseInt(day) + '日';
+                })
+                .trim();
+        }
+
+        function extractTextFromElement(element) {
+            // 递归提取文本，跳过注脚等元素
+            // 关键：跳过元素时，同时去掉其前后的空白
+            let result = '';
+            let skipNextWhitespace = false;
+            
+            for (const child of element.childNodes) {
+                if (child.nodeType === Node.TEXT_NODE) {
+                    let text = child.textContent;
+                    
+                    // 如果前一个元素被跳过，移除开头的空白
+                    if (skipNextWhitespace) {
+                        text = text.replace(/^[\s\r\n]+/, '');
+                        skipNextWhitespace = false;
+                    }
+                    
+                    // 添加文本（保留原始格式，后续统一清理）
+                    result += text;
+                    
+                } else if (child.nodeType === Node.ELEMENT_NODE) {
+                    if (shouldSkipElement(child)) {
+                        // 跳过该元素
+                        // 同时去掉 result 末尾的空白（注脚前的空格也不要）
+                        result = result.replace(/[\s\r\n]+$/, '');
+                        // 标记下一个文本节点开头的空白也要跳过
+                        skipNextWhitespace = true;
+                    } else {
+                        // 递归提取子元素的文本
+                        let childText = extractTextFromElement(child);
+                        if (childText) {
+                            result += childText;
+                        }
+                        skipNextWhitespace = false;
+                    }
+                }
+            }
+            
+            return result;
+        }
+
+        function initTTSParagraphs(doPreload = true) {
+            const content = document.getElementById('book-content');
+            
+            // 按段落元素提取文本
+            const SELECTORS = typeof window.TTS_PARAGRAPH_SELECTORS === 'string' ? window.TTS_PARAGRAPH_SELECTORS : 'p, div, h1, h2, h3, h4, h5, h6, li, blockquote, td, th';
+            const paragraphElements = content.querySelectorAll(SELECTORS);
+            
+            ttsParagraphs = [];
+            const processedTexts = new Set(); // 避免重复
+            
+            paragraphElements.forEach(element => {
+                // 跳过非正文元素（如注脚区域）
+                if (shouldSkipElement(element)) {
+                    return;
+                }
+                
+                // 跳过包含嵌套段落的元素（只处理最内层）
+            const nestedParagraphs = element.querySelectorAll(SELECTORS);
+                if (nestedParagraphs.length > 0) {
+                    return;
+                }
+                
+                // 提取文本（跳过注脚等子元素）
+                let text = extractTextFromElement(element);
+                
+                // 清理文本
+                text = cleanTextForTTS(text);
+                
+                // 只添加有实际内容的段落（至少1个字符）
+                if (text.length >= 1 && !processedTexts.has(text)) {
+                    processedTexts.add(text);
+                    ttsParagraphs.push({
+                        text: text,
+                        node: element
+                    });
+                }
+            });
+            window.ttsParagraphs = ttsParagraphs;
+            try { UI.initImageRewrite(BOOK_ID); } catch {}
+            
+            updateTTSStatus('已准备 ' + ttsParagraphs.length + ' 个段落');
+            
+            // 应用待恢复的朗读位置
+            if (pendingResumeParagraph !== null && pendingResumeParagraph < ttsParagraphs.length) {
+                ttsCurrentIndex = pendingResumeParagraph;
+                highlightParagraph(ttsCurrentIndex, 'center');
+                updateTTSProgress();
+                updateTTSStatus('已定位到上次朗读位置');
+                pendingResumeParagraph = null;
+            }
+            
+            if (doPreload) {
+                startPreloading();
+            }
+        }
+
+        function updateSelectionVisuals(index, behavior = 'smooth') {
+            if (window.UI && typeof UI.selectVisuals === 'function') { try { UI.selectVisuals(index, behavior); return; } catch {} }
+            document.querySelectorAll('.paragraph-selected').forEach(el => el.classList.remove('paragraph-selected'));
+            const para = ttsParagraphs[index];
+            if (!para) return;
+            para.node.classList.add('paragraph-selected');
+            para.node.scrollIntoView({ behavior: behavior === 'auto' ? 'auto' : 'smooth', block: 'center' });
+        }
+
+        function highlightParagraph(index, behavior = 'smooth') {
+            if (window.UI && typeof UI.highlight === 'function') { try { UI.highlight(index, behavior); return; } catch {} }
+            document.querySelectorAll('.tts-highlight').forEach(el => el.classList.remove('tts-highlight'));
+            const para = ttsParagraphs[index];
+            if (!para) return;
+            para.node.classList.add('tts-highlight');
+            para.node.scrollIntoView({ behavior: behavior === 'auto' ? 'auto' : 'smooth', block: 'center' });
+        }
+
+        async function saveProgressToServer(chapterIdx, paragraphIdx) {
+            try {
+                await fetch('/api/progress', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        book_id: BOOK_ID,
+                        chapter_index: chapterIdx,
+                        paragraph_index: paragraphIdx
+                    })
+                });
+            } catch (e) {
+                console.log('保存朗读进度失败:', e);
+            }
+        }
+
+        async function maybeRestoreProgress() {
+            if (SKIP_RESUME_PROMPT) return;
+            if (localStorage.getItem(RESUME_SHOWN_KEY)) return;
+            try {
+                const resp = await fetch(`/api/progress?book_id=${encodeURIComponent(BOOK_ID)}`);
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (!data || data.chapter_index === undefined) return;
+                const savedChapter = data.chapter_index;
+                const savedPara = data.paragraph_index ?? 0;
+                if (savedChapter === CHAPTER_INDEX) {
+                    const ok = confirm(`检测到上次朗读进度：第 ${savedChapter + 1} 章，第 ${savedPara + 1} 段，是否定位？`);
+                    localStorage.setItem(RESUME_SHOWN_KEY, '1');
+                    if (ok) {
+                        pendingResumeParagraph = savedPara;
+                        initTTSParagraphs(false);
+                    }
+                } else {
+                    const ok = confirm(`检测到上次朗读进度：第 ${savedChapter + 1} 章，是否跳转？`);
+                    localStorage.setItem(RESUME_SHOWN_KEY, '1');
+                    if (ok) {
+                        window.location.href = `/read/${BOOK_ID}/${savedChapter}?resume=1&para=${savedPara}`;
+                    }
+                }
+            } catch (e) {
+                console.log('读取朗读进度失败:', e);
+            }
+        }
+
+        // === TTS 设置管理 ===
+        const TTS_SETTINGS_KEY = 'reader3_tts_settings';
+
+        function toggleTTSSettings() {
+            const content = document.getElementById('tts-settings-content');
+            const arrow = document.getElementById('tts-settings-arrow');
+            content.classList.toggle('visible');
+            arrow.textContent = content.classList.contains('visible') ? '▲' : '▼';
+        }
+
+        function updateEngineSettingsVisibility() {
+            try {
+                const engineEl = document.getElementById('tts-engine');
+                const engine = engineEl ? engineEl.value : 'edge';
+                const edge = document.getElementById('edge-settings');
+                const gpt = document.getElementById('gptsovits-settings');
+                const idx = document.getElementById('indextts-settings');
+                if (edge) edge.style.display = engine === 'edge' ? 'block' : 'none';
+                if (gpt) gpt.style.display = engine === 'gptsovits' ? 'block' : 'none';
+                if (idx) idx.style.display = engine === 'indextts' ? 'block' : 'none';
+            } catch {}
+            try {
+                if (window.Settings && typeof Settings.updateVisibility === 'function') {
+                    Settings.updateVisibility();
+                }
+            } catch {}
+        }
+
+        // Edge TTS 显示更新函数
+        function updateEdgeRateDisplay() {
+            const val = document.getElementById('edge-rate').value;
+            document.getElementById('edge-rate-value').textContent = (val >= 0 ? '+' : '') + val + '%';
+        }
+        function updateEdgeVolumeDisplay() {
+            const val = document.getElementById('edge-volume').value;
+            document.getElementById('edge-volume-value').textContent = (val >= 0 ? '+' : '') + val + '%';
+        }
+        function updateEdgePitchDisplay() {
+            const val = document.getElementById('edge-pitch').value;
+            document.getElementById('edge-pitch-value').textContent = (val >= 0 ? '+' : '') + val + 'Hz';
+        }
+        function resetEdgeSettings() {
+            document.getElementById('edge-voice').value = 'zh-CN-XiaoxiaoNeural';
+            document.getElementById('edge-rate').value = 0;
+            document.getElementById('edge-volume').value = 0;
+            document.getElementById('edge-pitch').value = 0;
+            updateEdgeRateDisplay();
+            updateEdgeVolumeDisplay();
+            updateEdgePitchDisplay();
+            saveTTSSettings();
+        }
+
+        function saveTTSSettings() {
+            try {
+                if (window.Settings && typeof Settings.save === 'function') {
+                    Settings.save();
+                    return;
+                }
+            } catch {}
+            try {
+                const autoAdvance = document.getElementById('tts-auto-advance').checked;
+                const skipToc = document.getElementById('tts-skip-toc').checked;
+                const skipCopyright = document.getElementById('tts-skip-copyright').checked;
+                const preload = parseInt(document.getElementById('tts-preload-count').value || '-1', 10);
+                const engine = document.getElementById('tts-engine').value;
+                const settings = { autoAdvance, skipToc, skipCopyright, preload, engine, edge: {}, gptsovits: {}, indextts: {} };
+                localStorage.setItem(TTS_SETTINGS_KEY, JSON.stringify(settings));
+                localStorage.setItem(TTS_ENGINE_KEY, engine);
+                TTS_PRELOAD_COUNT = preload;
+                persistPreloadCount(TTS_PRELOAD_COUNT);
+            } catch {}
+            updateEngineSettingsVisibility();
+        }
+        
+        // GPT-SoVITS 语言选项 (V1/V2 版本不同)
+        const GPTSOVITS_LANG_V1 = {
+            '中文': 'all_zh',
+            '英文': 'en',
+            '日文': 'all_ja',
+            '中英混合': 'zh',
+            '日英混合': 'ja',
+            '多语种混合': 'auto'
+        };
+        
+        const GPTSOVITS_LANG_V2 = {
+            '中文': 'all_zh',
+            '英文': 'en',
+            '日文': 'all_ja',
+            '粤语': 'all_yue',
+            '韩文': 'all_ko',
+            '中英混合': 'zh',
+            '日英混合': 'ja',
+            '粤英混合': 'yue',
+            '韩英混合': 'ko',
+            '多语种混合': 'auto',
+            '多语种混合(粤语)': 'auto_yue'
+        };
+        
+        function updateGPTSoVITSLangOptions() {
+            const version = document.getElementById('gptsovits-version').value;
+            const langMap = version === 'v1' ? GPTSOVITS_LANG_V1 : GPTSOVITS_LANG_V2;
+            
+            const textLangSelect = document.getElementById('gptsovits-text-lang');
+            const promptLangSelect = document.getElementById('gptsovits-prompt-lang');
+            
+            // 保存当前值
+            const currentTextLang = textLangSelect.value;
+            const currentPromptLang = promptLangSelect.value;
+            
+            // 清空并重新填充
+            textLangSelect.innerHTML = '';
+            promptLangSelect.innerHTML = '';
+            
+            for (const [label, value] of Object.entries(langMap)) {
+                textLangSelect.add(new Option(label, value));
+                promptLangSelect.add(new Option(label, value));
+            }
+            
+            // 恢复之前的值（如果存在）
+            if ([...textLangSelect.options].some(o => o.value === currentTextLang)) {
+                textLangSelect.value = currentTextLang;
+            } else {
+                textLangSelect.value = 'all_zh'; // 默认中文
+            }
+            if ([...promptLangSelect.options].some(o => o.value === currentPromptLang)) {
+                promptLangSelect.value = currentPromptLang;
+            } else {
+                promptLangSelect.value = 'all_zh';
+            }
+        }
+        
+        // GPT-SoVITS 辅助函数
+        function resetGPTSoVITSSettings() {
+            document.getElementById('gptsovits-url').value = 'http://127.0.0.1:9880';
+            document.getElementById('gptsovits-version').value = 'v2';
+            document.getElementById('gptsovits-method').value = 'POST';
+            document.getElementById('gptsovits-streaming').checked = true;  // 默认开启流式
+            document.getElementById('gptsovits-ref').value = '';
+            document.getElementById('gptsovits-prompt').value = '';
+            updateGPTSoVITSLangOptions();
+            document.getElementById('gptsovits-text-lang').value = 'all_zh';
+            document.getElementById('gptsovits-prompt-lang').value = 'all_zh';
+            document.getElementById('gptsovits-top-k').value = 5;
+            document.getElementById('gptsovits-top-p').value = 1;
+            document.getElementById('gptsovits-temperature').value = 1;
+            document.getElementById('gptsovits-text-split').value = 'cut5';
+            document.getElementById('gptsovits-speed').value = 1;
+            document.getElementById('gptsovits-speed-value').textContent = '1x';
+            document.getElementById('gptsovits-repetition').value = 1.35;
+            document.getElementById('gptsovits-seed').value = -1;
+            document.getElementById('gptsovits-parallel').checked = true;
+            document.getElementById('gptsovits-split-bucket').checked = true;
+            document.getElementById('gptsovits-batch-size').value = 1;
+            document.getElementById('gptsovits-sample-steps').value = 32;
+            document.getElementById('gptsovits-gpt-path').value = '';
+            document.getElementById('gptsovits-sovits-path').value = '';
+            saveTTSSettings();
+        }
+        
+        // 页面加载时初始化 GPT-SoVITS 语言选项
+        function initGPTSoVITSOptions() {
+            updateGPTSoVITSLangOptions();
+        }
+        
+        // GPT-SoVITS 模型预设选择
+        function selectGPTPreset(value) {
+            if (value) {
+                document.getElementById('gptsovits-gpt-path').value = value;
+                saveTTSSettings();
+            }
+        }
+        
+        function selectSoVITSPreset(value) {
+            if (value) {
+                document.getElementById('gptsovits-sovits-path').value = value;
+                saveTTSSettings();
+            }
+        }
+        
+        // 浏览模型文件路径（使用文件选择器）
+        // 缓存的模型目录路径
+        let cachedModelDirPath = '';
+        let cachedModelDirName = '';
+        
+        async function browseModelPath(type) {
+            const inputId = type === 'gpt' ? 'gptsovits-gpt-path' : 'gptsovits-sovits-path';
+            const ext = type === 'gpt' ? '.ckpt' : '.pth';
+            
+            try {
+                const dirHandle = await window.showDirectoryPicker();
+                const files = [];
+                
+                // 扫描目录中的模型文件
+                for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'file' && entry.name.endsWith(ext)) {
+                        files.push(entry.name);
+                    }
+                }
+                
+                if (files.length === 0) {
+                    alert(`该目录中没有找到 ${ext} 模型文件`);
+                    return;
+                }
+                
+                // 获取目录路径（使用缓存或模型目录输入框的值）
+                let dirPath;
+                const modelDirInput = document.getElementById('gptsovits-model-dir').value;
+                
+                if (cachedModelDirName === dirHandle.name && cachedModelDirPath) {
+                    dirPath = cachedModelDirPath;
+                } else if (modelDirInput && modelDirInput.includes(dirHandle.name)) {
+                    dirPath = modelDirInput;
+                } else {
+                    dirPath = prompt(
+                        '首次使用此目录，请输入完整路径：\n\n' +
+                        '目录: ' + dirHandle.name + '\n' +
+                        '找到 ' + files.length + ' 个模型文件',
+                        cachedModelDirPath || modelDirInput || ''
+                    );
+                    if (!dirPath) return;
+                    dirPath = dirPath.trim().replace(/^["']|["']$/g, '');
+                    cachedModelDirPath = dirPath;
+                    cachedModelDirName = dirHandle.name;
+                }
+                
+                // 选择文件
+                let fileName;
+                if (files.length === 1) {
+                    fileName = files[0];
+                } else {
+                    // 使用 prompt 让用户选择（比较简单的方式）
+                    fileName = prompt('找到以下模型文件，请输入要选择的文件名：\n\n' + files.join('\n'), files[0]);
+                    if (!fileName || !files.includes(fileName)) return;
+                }
+                
+                let fullPath = dirPath;
+                if (!fullPath.endsWith('/') && !fullPath.endsWith('\\')) {
+                    fullPath += '/';
+                }
+                fullPath += fileName;
+                document.getElementById(inputId).value = fullPath;
+                saveTTSSettings();
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    console.log('选择模型文件失败:', e);
+                }
+            }
+        }
+        
+        // 浏览模型扫描目录
+        async function browseModelDir() {
+            try {
+                const dirHandle = await window.showDirectoryPicker();
+                const currentDir = document.getElementById('gptsovits-model-dir').value || '';
+                
+                // 如果缓存的目录名相同，直接使用缓存
+                let dirPath;
+                if (cachedModelDirName === dirHandle.name && cachedModelDirPath) {
+                    dirPath = cachedModelDirPath;
+                } else {
+                    dirPath = prompt(
+                        '首次使用此目录，请输入完整路径：\n\n' +
+                        '目录: ' + dirHandle.name,
+                        currentDir || cachedModelDirPath || ''
+                    );
+                    if (!dirPath) return;
+                    dirPath = dirPath.trim().replace(/^["']|["']$/g, '');
+                    cachedModelDirPath = dirPath;
+                    cachedModelDirName = dirHandle.name;
+                }
+                
+                document.getElementById('gptsovits-model-dir').value = dirPath;
+                saveTTSSettings();
+                loadTrainedModels();
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    console.log('选择目录失败:', e);
+                }
+            }
+        }
+        
+        // 加载训练好的模型列表
+        async function loadTrainedModels() {
+            const modelDir = document.getElementById('gptsovits-model-dir').value || '.';
+            try {
+                const resp = await fetch(`/api/gptsovits/models?model_dir=${encodeURIComponent(modelDir)}`);
+                if (!resp.ok) {
+                    console.log('无法加载训练模型列表');
+                    return;
+                }
+                const data = await resp.json();
+                
+                // 填充 GPT 模型列表
+                const gptSelect = document.getElementById('gptsovits-gpt-trained');
+                gptSelect.innerHTML = `<option value="">-- 训练模型 (${data.gpt_models?.length || 0}) --</option>`;
+                if (data.gpt_models) {
+                    data.gpt_models.forEach(model => {
+                        const opt = document.createElement('option');
+                        opt.value = model.path;
+                        opt.textContent = model.name;
+                        gptSelect.appendChild(opt);
+                    });
+                }
+                
+                // 填充 SoVITS 模型列表
+                const sovitsSelect = document.getElementById('gptsovits-sovits-trained');
+                sovitsSelect.innerHTML = `<option value="">-- 训练模型 (${data.sovits_models?.length || 0}) --</option>`;
+                if (data.sovits_models) {
+                    data.sovits_models.forEach(model => {
+                        const opt = document.createElement('option');
+                        opt.value = model.path;
+                        opt.textContent = model.name;
+                        sovitsSelect.appendChild(opt);
+                    });
+                }
+                
+                console.log(`加载了 ${data.gpt_models?.length || 0} 个 GPT 模型, ${data.sovits_models?.length || 0} 个 SoVITS 模型`);
+            } catch (e) {
+                console.log('加载模型列表失败:', e);
+            }
+        }
+        
+        // GPT-SoVITS 模型切换 (通过代理避免跨域)
+        async function setGPTWeights() {
+            const path = document.getElementById('gptsovits-gpt-path').value;
+            if (!path) {
+                alert('请输入 GPT 模型路径');
+                return;
+            }
+            const apiUrl = document.getElementById('gptsovits-url').value;
+            try {
+                const resp = await fetch(`/api/gptsovits/set_gpt_weights?api_url=${encodeURIComponent(apiUrl)}&weights_path=${encodeURIComponent(path)}`);
+                const data = await resp.json();
+                if (resp.ok && data.success) {
+                    alert('GPT 模型切换成功');
+                } else {
+                    alert('切换失败: ' + (data.detail || data.message || '未知错误'));
+                }
+            } catch (e) {
+                alert('请求失败: ' + e.message);
+            }
+        }
+        
+        async function setSoVITSWeights() {
+            const path = document.getElementById('gptsovits-sovits-path').value;
+            if (!path) {
+                alert('请输入 SoVITS 模型路径');
+                return;
+            }
+            const apiUrl = document.getElementById('gptsovits-url').value;
+            try {
+                const resp = await fetch(`/api/gptsovits/set_sovits_weights?api_url=${encodeURIComponent(apiUrl)}&weights_path=${encodeURIComponent(path)}`);
+                const data = await resp.json();
+                if (resp.ok && data.success) {
+                    alert('SoVITS 模型切换成功');
+                } else {
+                    alert('切换失败: ' + (data.detail || data.message || '未知错误'));
+                }
+            } catch (e) {
+                alert('请求失败: ' + e.message);
+            }
+        }
+        
+        // GPT-SoVITS 服务控制 (通过代理避免跨域)
+        async function gptsovitsControl(command) {
+            if (command === 'exit' && !confirm('确定要停止 GPT-SoVITS 服务吗？')) {
+                return;
+            }
+            const apiUrl = document.getElementById('gptsovits-url').value;
+            try {
+                await fetch(`/api/gptsovits/control?api_url=${encodeURIComponent(apiUrl)}&command=${command}`);
+                alert(command === 'restart' ? '服务正在重启...' : '服务已停止');
+            } catch (e) {
+                if (command === 'exit') {
+                    alert('服务已停止');
+                } else {
+                    alert('请求失败: ' + e.message);
+                }
+            }
+        }
+        
+        // 页面加载时尝试加载训练模型列表
+        setTimeout(loadTrainedModels, 1000);
+        
+        // 缓存的目录路径
+        let cachedAudioDirPath = '';
+        let cachedAudioDirName = '';
+        let savedRefs = SERVER_SAVED_REFS.slice();
+        let dirRefs = [];
+        let pendingResumeParagraph = RESUME_PARAM ? parseInt(RESUME_PARAM, 10) : null;
+        
+        // 浏览参考音频文件（文件选择器）
+        async function browseRefAudioFile() {
+            try {
+                const [fileHandle] = await window.showOpenFilePicker({
+                    multiple: false,
+                    types: [{
+                        description: '音频文件',
+                        accept: { 'audio/*': ['.mp3', '.wav', '.flac', '.ogg', '.m4a'] }
+                    }]
+                });
+                const file = await fileHandle.getFile();
+                const fileName = file.name;
+
+                // 复用或提示目录路径
+                const defaultPath = cachedAudioDirPath || '';
+                const inputPath = prompt(
+                    '请输入该文件所在目录的完整路径（可直接粘贴包含文件名的完整路径）：\n\n' +
+                    '文件: ' + fileName + '\n' +
+                    '示例: C:\\\\audio\\\\ref\\\\',
+                    defaultPath
+                );
+                if (!inputPath) return;
+                let cleaned = inputPath.trim().replace(/^["']|["']$/g, '');
+                // 如果用户粘贴了完整路径，剥离文件名
+                if (cleaned.toLowerCase().endsWith(fileName.toLowerCase())) {
+                    cleaned = cleaned.slice(0, -fileName.length);
+                }
+                cleaned = cleaned.replace(/[\\/]+$/, '');
+                cachedAudioDirPath = cleaned;
+                cachedAudioDirName = '';
+
+                const fullPath = cleaned + '/' + fileName;
+                document.getElementById('gptsovits-ref').value = fullPath;
+                const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+                document.getElementById('gptsovits-prompt').value = nameWithoutExt;
+                addDirRef(fullPath, nameWithoutExt);
+                renderRefList();
+                saveTTSSettings();
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    console.log('选择音频文件失败:', e);
+                }
+            }
+        }
+        
+        // 浏览参考音频目录
+        async function browseRefAudioDir() {
+            try {
+                const dirHandle = await window.showDirectoryPicker();
+                const audioFiles = [];
+                
+                // 扫描目录中的音频文件
+                for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'file') {
+                        const name = entry.name.toLowerCase();
+                        if (name.endsWith('.mp3') || name.endsWith('.wav') || 
+                            name.endsWith('.flac') || name.endsWith('.ogg') || name.endsWith('.m4a')) {
+                            audioFiles.push(entry.name);
+                        }
+                    }
+                }
+                
+                if (audioFiles.length === 0) {
+                    alert('该目录中没有找到音频文件');
+                    return;
+                }
+                
+                // 复用缓存的路径或提示输入
+                let basePath;
+                if (cachedAudioDirName === dirHandle.name && cachedAudioDirPath) {
+                    basePath = cachedAudioDirPath;
+                } else {
+                    basePath = prompt(
+                        '首次使用此目录，请输入完整路径：\n\n' +
+                        '目录: ' + dirHandle.name + '\n' +
+                        '找到 ' + audioFiles.length + ' 个音频文件',
+                        cachedAudioDirPath || ''
+                    );
+                    if (!basePath || !basePath.trim()) return;
+                    basePath = basePath.trim().replace(/^["']|["']$/g, '');
+                    cachedAudioDirPath = basePath;
+                    cachedAudioDirName = dirHandle.name;
+                }
+                
+                if (!basePath.endsWith('/') && !basePath.endsWith('\\')) {
+                    basePath += '/';
+                }
+                
+                dirRefs = audioFiles.sort().map(file => ({
+                    path: basePath + file,
+                    prompt: file.replace(/\.[^/.]+$/, ''),
+                    source: 'dir'
+                }));
+                renderRefList();
+                saveTTSSettings();
+                
+                // 保存目录路径到配置
+                saveRefAudioDirToConfig(basePath);
+                
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    alert('浏览器不支持目录选择，请手动输入路径。');
+                }
+            }
+        }
+        
+        // 保存参考音频目录到配置
+        async function saveRefAudioDirToConfig(dirPath) {
+            try {
+                await fetch('/api/tts/ref-dir', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dir_path: dirPath.replace(/[\\/]+$/, '') })
+                });
+                console.log('[TTS] 参考音频目录已保存:', dirPath);
+            } catch (e) {
+                console.log('[TTS] 保存参考音频目录失败:', e);
+            }
+        }
+        
+        // 从配置加载参考音频目录
+        async function loadRefAudioDirFromConfig() {
+            try {
+                const resp = await fetch('/api/tts/ref-dir');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                
+                if (data.dir_path && data.files && data.files.length > 0) {
+                    cachedAudioDirPath = data.dir_path;
+                    dirRefs = data.files.map(f => ({
+                        path: f.path,
+                        prompt: f.prompt,
+                        source: 'dir'
+                    }));
+                    renderRefList();
+                    console.log('[TTS] 从配置加载了', data.files.length, '个参考音频');
+                }
+            } catch (e) {
+                console.log('[TTS] 加载参考音频目录失败:', e);
+            }
+        }
+
+        // 将目录或文件选择结果加入临时列表
+        function addDirRef(path, prompt) {
+            dirRefs = [{ path, prompt, source: 'dir' }, ...dirRefs.filter(r => r.path !== path)];
+            renderRefList();
+        }
+
+        // 渲染参考音频列表（常用 + 当前目录）
+        function renderRefList() {
+            const select = document.getElementById('gptsovits-ref-list');
+            const all = [
+                ...savedRefs.map(r => ({ ...r, source: 'saved' })),
+                ...dirRefs
+            ];
+            select.innerHTML = '<option value=\"\">-- 选择参考音频 --</option>';
+            all.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.path;
+                const fileName = item.path.split(/[/\\\\]/).pop() || item.path;
+                const label = (item.source === 'saved' ? '★ ' : '') + (item.prompt ? `[${item.prompt}] ` : '') + fileName;
+                opt.textContent = label;
+                opt.dataset.prompt = item.prompt || '';
+                opt.dataset.type = item.source || 'dir';
+                select.appendChild(opt);
+            });
+            select.style.display = all.length > 0 ? 'block' : 'none';
+        }
+
+        // 加载常用参考音频
+        async function loadSavedRefs() {
+            try {
+                const resp = await fetch('/api/tts/refs');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                savedRefs = (data.refs || []).map(r => ({ ...r, source: 'saved' }));
+                renderRefList();
+            } catch (e) {
+                console.log('加载常用参考音频失败:', e);
+            }
+        }
+
+        // 保存当前参考音频到常用列表
+        async function saveCurrentRefToSaved() {
+            const path = document.getElementById('gptsovits-ref').value.trim().replace(/^["']|["']$/g, '');
+            let promptText = document.getElementById('gptsovits-prompt').value.trim();
+            if (!path) { alert('请先选择参考音频'); return; }
+            if (!promptText) {
+                const fn = path.split(/[/\\\\]/).pop() || '';
+                promptText = fn.replace(/\\.[^/.]+$/, '');
+            }
+            try {
+                const resp = await fetch('/api/tts/refs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path, prompt: promptText })
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    savedRefs = (data.refs || []).map(r => ({ ...r, source: 'saved' }));
+                    renderRefList();
+                    alert('已加入常用列表');
+                } else {
+                    alert(data.detail || '保存失败');
+                }
+            } catch (e) {
+                alert('保存失败: ' + e.message);
+            }
+        }
+
+        // 删除选中的常用参考音频
+        async function deleteSelectedSavedRef() {
+            const select = document.getElementById('gptsovits-ref-list');
+            const option = select.options[select.selectedIndex];
+            if (!option || !option.value) return;
+            if (option.dataset.type !== 'saved') {
+                alert('只有常用列表项才能删除');
+                return;
+            }
+            const path = option.value;
+            try {
+                const resp = await fetch(`/api/tts/refs?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
+                const data = await resp.json();
+                if (resp.ok) {
+                    savedRefs = (data.refs || []).map(r => ({ ...r, source: 'saved' }));
+                    renderRefList();
+                } else {
+                    alert(data.detail || '删除失败');
+                }
+            } catch (e) {
+                alert('删除失败: ' + e.message);
+            }
+        }
+        
+        // 从列表选择参考音频
+        function selectRefAudio(value) {
+            if (!value) return;
+            const select = document.getElementById('gptsovits-ref-list');
+            const option = select.options[select.selectedIndex];
+            document.getElementById('gptsovits-ref').value = value;
+            if (option.dataset.prompt) {
+                document.getElementById('gptsovits-prompt').value = option.dataset.prompt;
+            }
+            saveTTSSettings();
+        }
+
+        function loadTTSSettings() {
+            try {
+                if (window.Settings && typeof Settings.load === 'function') {
+                    Settings.load();
+                    return;
+                }
+            } catch {}
+            try {
+                const engine = localStorage.getItem(TTS_ENGINE_KEY) || 'edge';
+                document.getElementById('tts-engine').value = engine;
+            } catch {}
+            updateEngineSettingsVisibility();
+        }
+
+        function getTTSParams() {
+            try {
+                if (window.Settings && typeof Settings.getParams === 'function') {
+                    return Settings.getParams();
+                }
+            } catch {}
+            const engineEl = document.getElementById('tts-engine');
+            const engine = engineEl ? engineEl.value : 'edge';
+            return 'engine=' + engine;
+        }
+
+        // 初始化 TTS 设置
+        loadTTSSettings();
+        updatePreloadCount(); // 同步预加载数值
+        updatePreloadLimitsUI();
+        renderRefList();
+        loadSavedRefs();
+        loadRefAudioDirFromConfig();  // 加载配置中保存的参考音频目录
+        maybeRestoreProgress();
+        updateEngineSettingsVisibility();
+
+        // 监听引擎切换
+        document.getElementById('tts-engine').addEventListener('change', onTTSEngineChange);
+
+        function updateTTSStatus(msg) {
+            document.getElementById('tts-status').textContent = msg;
+        }
+
+        function updateTTSProgress() {
+            const progress = ttsParagraphs.length > 0 
+                ? (ttsCurrentIndex / ttsParagraphs.length) * 100 
+                : 0;
+            document.getElementById('tts-progress-bar').style.width = progress + '%';
+        }
+
+        function updatePreloadLimitsUI() {
+            try {
+                if (window.TTS && typeof window.TTS.getPreloadLimits === 'function') {
+                    const lim = window.TTS.getPreloadLimits();
+                    document.getElementById('tts-preload-max-items').value = lim.maxItems;
+                    document.getElementById('tts-preload-max-mb').value = lim.maxTotalMB;
+                }
+            } catch {}
+        }
+
+        async function applyPreloadLimits() {
+            try {
+                const maxItems = parseInt(document.getElementById('tts-preload-max-items').value || '300', 10);
+                const maxMB = parseInt(document.getElementById('tts-preload-max-mb').value || '512', 10);
+                if (window.TTS && typeof window.TTS.setPreloadLimits === 'function') {
+                    window.TTS.setPreloadLimits({ maxItems, maxTotalMB: maxMB });
+                    await window.TTS.enforceLimits();
+                    updateTTSStatus('本地缓存阈值已应用');
+                }
+            } catch {}
+        }
+
+        async function showLocalPreloadStats() {
+            try {
+                if (window.TTS && typeof window.TTS.getPreloadStats === 'function') {
+                    const s = await window.TTS.getPreloadStats();
+                    updateTTSStatus('本地缓存: ' + s.count + ' 条, ' + s.totalMB + ' MB');
+                }
+            } catch {}
+        }
+
+        async function clearLocalPreloadCache() {
+            try {
+                if (!confirm('确定清除本地持久化预加载缓存？')) return;
+                if (window.TTS && typeof window.TTS.clearIDBPreload === 'function') {
+                    const ok = await window.TTS.clearIDBPreload();
+                    if (ok) updateTTSStatus('本地缓存已清除');
+                }
+            } catch {}
+        }
+
+        function getSelectedPreloadFilter() {
+            const val = (document.getElementById('tts-preload-filter').value || 'all');
+            const book = window.BOOK_ID || '';
+            const engine = document.getElementById('tts-engine')?.value || '';
+            if (val === 'book') return { book };
+            if (val === 'engine') return { engine };
+            if (val === 'book_engine') return { book, engine };
+            return {};
+        }
+
+        async function showFilteredPreloadStats() {
+            try {
+                const filter = getSelectedPreloadFilter();
+                if (window.TTS && typeof window.TTS.getPreloadStats === 'function') {
+                    const s = await window.TTS.getPreloadStats(filter);
+                    updateTTSStatus('过滤统计: ' + s.count + ' 条, ' + s.totalMB + ' MB');
+                }
+            } catch {}
+        }
+
+        async function clearFilteredPreloadCache() {
+            try {
+                const filter = getSelectedPreloadFilter();
+                if (!confirm('确定清除当前过滤范围的本地缓存？')) return;
+                if (window.TTS && typeof window.TTS.clearIDBPreload === 'function') {
+                    const ok = await window.TTS.clearIDBPreload(filter);
+                    if (ok) updateTTSStatus('过滤范围缓存已清除');
+                }
+            } catch {}
+        }
+
+        async function openPreloadDetailPanel() {
+            const panel = document.getElementById('preload-detail');
+            if (!panel) return;
+            panel.style.display = 'block';
+            panel.innerHTML = '加载中...';
+            const filter = getSelectedPreloadFilter();
+            try {
+                if (window.TTS && typeof window.TTS.listPreloadEntries === 'function') {
+                    const list = await window.TTS.listPreloadEntries(filter);
+                    renderPreloadDetail(list || []);
+                } else {
+                    panel.innerHTML = '当前环境未提供缓存明细接口';
+                }
+            } catch (e) {
+                panel.innerHTML = '加载失败';
+            }
+        }
+
+        function renderPreloadDetail(list) {
+            const panel = document.getElementById('preload-detail');
+            if (!panel) return;
+            if (!Array.isArray(list) || list.length === 0) { panel.innerHTML = '无数据'; return; }
+            const rows = list.map((it, i) => {
+                const text = (it.text || '').slice(0, 40).replace(/[\n\r]/g, ' ');
+                const size = (it.sizeMB != null ? (it.sizeMB + ' MB') : (it.size != null ? (Math.round(it.size/1024/1024*100)/100 + ' MB') : ''));
+                const engine = it.engine || '';
+                const book = it.book || '';
+                const key = it.key || it.id || '';
+                return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
+                    <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${text}</span>
+                    <span style="color:var(--muted-color);">${engine}</span>
+                    <span style="color:var(--muted-color);">${book}</span>
+                    <span style="color:var(--muted-color);">${size}</span>
+                    <button style="font-size:0.8em;padding:2px 8px;" onclick="deletePreloadItem('${key}', '${encodeURIComponent(text)}')">删除</button>
+                </div>`;
+            }).join('');
+            panel.innerHTML = rows;
+        }
+
+        async function deletePreloadItem(key, textPreviewEnc) {
+            const filter = getSelectedPreloadFilter();
+            try {
+                if (window.TTS) {
+                    if (typeof window.TTS.deletePreloadEntry === 'function' && key) {
+                        await window.TTS.deletePreloadEntry(key);
+                    } else if (typeof window.TTS.deletePreloadByKey === 'function' && key) {
+                        await window.TTS.deletePreloadByKey(key);
+                    } else if (typeof window.TTS.deletePreloadByText === 'function') {
+                        const decoded = decodeURIComponent(textPreviewEnc);
+                        await window.TTS.deletePreloadByText(decoded);
+                    }
+                }
+            } catch {}
+            openPreloadDetailPanel();
+            showFilteredPreloadStats();
+        }
+
+        // === 完全异步的 TTS 队列 + Worker 系统 ===
+        // 三个独立的异步任务：
+        // 1. Fetch Worker: 负责发送文本请求到TTS服务器
+        // 2. 接收处理: 将返回的音频放入播放队列
+        // 3. Playback Worker: 负责从播放队列中取出音频并按顺序播放
+        
+        let ttsHasError = false;
+        const TTS_CACHE_KEY = 'reader3_tts_cache_' + BOOK_ID;
+        const TTS_MAX_RETRY = 3;  // 最大重试次数
+        
+        // 音频队列状态
+        let ttsReadyQueue = {};      // 已就绪的音频 {index: Blob}
+        let ttsFetchQueue = [];      // 待发送队列 (索引数组)
+        let ttsRetryCount = {};      // 重试计数 {index: count}
+        let ttsFetchWorkerRunning = false;  // Fetch Worker 是否在运行
+        let ttsPlaybackWorkerRunning = false; // Playback Worker 是否在运行
+        let ttsNextPlayIndex = 0;    // 下一个要播放的索引
+        
+        async function persistPreloadCount(count) {
+            try {
+                await fetch('/api/tts/preload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ count })
+                });
+            } catch (e) {
+                console.log('保存预加载数量失败:', e);
+            }
+        }
+
+        function updatePreloadCount(persist = false) {
+            const val = parseInt(document.getElementById('tts-preload-count').value || '-1', 10);
+            TTS_PRELOAD_COUNT = isNaN(val) ? -1 : val;
+            if (persist) {
+                persistPreloadCount(TTS_PRELOAD_COUNT);
+            }
+        }
+
+        // 生成缓存键（用于服务端缓存）
+        function getTTSCacheKey(text, engine) {
+            // 使用文本前100字符 + 引擎名称 + 书籍ID作为缓存键
+            return TTS_CACHE_KEY + '_' + text.substring(0, 100) + '_' + engine;
+        }
+
+        // 内存中的缓存状态（避免重复请求服务器）
+        const knownCacheKeys = new Set();      // 已知存在的缓存
+        const knownMissingKeys = new Set();    // 已知不存在的缓存
+
+        // 从服务端缓存获取音频
+        async function getCachedAudio(index) {
+            // 在停止或未播放时不再发起缓存请求，避免产生 aborted 日志
+            if (!ttsIsPlaying) return null;
+            let requestId = null;
+            try {
+                const para = ttsParagraphs[index];
+                if (!para) return null;
+                const engine = document.getElementById('tts-engine').value;
+                const cacheKey = getTTSCacheKey(para.text, engine);
+                
+                if (knownMissingKeys.has(cacheKey)) {
+                    return null;
+                }
+                
+                // 为缓存查询也提供可取消控制器，统一纳入 abortAllFetches 管理
+                requestId = `cache_${index}_${Date.now()}`;
+                const controller = new AbortController();
+                abortControllers.set(requestId, controller);
+                const response = await fetch('/api/tts/cache?cache_key=' + encodeURIComponent(cacheKey), { signal: controller.signal });
+                abortControllers.delete(requestId);
+                
+                if (response.ok && response.status === 200) {
+                    knownCacheKeys.add(cacheKey);
+                    return await response.blob();
+                } else {
+                    knownMissingKeys.add(cacheKey);
+                }
+            } catch (e) {
+                // 被主动取消时不记录错误，直接返回 null
+                if (e && e.name === 'AbortError') {
+                    if (requestId) abortControllers.delete(requestId);
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        // Blob 转 Base64 (使用 FileReader 避免大文件导致堆栈溢出)
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    if (reader.result) {
+                        // reader.result 是 "data:audio/wav;base64,....."
+                        // 我们只需要 base64 部分
+                        const base64 = reader.result.split(',')[1];
+                        resolve(base64);
+                    } else {
+                        reject(new Error('Blob conversion failed'));
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        // 保存音频到服务端缓存
+        async function cacheAudio(index, blob) {
+            let requestId = null;
+            try {
+                const para = ttsParagraphs[index];
+                if (!para) return;
+                const engine = document.getElementById('tts-engine').value;
+                const cacheKey = getTTSCacheKey(para.text, engine);
+                
+                const base64 = await blobToBase64(blob);
+                
+                requestId = `savecache_${index}_${Date.now()}`;
+                const controller = new AbortController();
+                abortControllers.set(requestId, controller);
+                await fetch('/api/tts/cache', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cache_key: cacheKey, audio_data: base64 }),
+                    signal: controller.signal
+                });
+                abortControllers.delete(requestId);
+                
+                knownCacheKeys.add(cacheKey);
+                knownMissingKeys.delete(cacheKey);
+                console.log('[TTS Cache] 已保存缓存 idx=', index);
+            } catch (e) {
+                if (e && e.name === 'AbortError') {
+                    if (requestId) abortControllers.delete(requestId);
+                    return;
+                }
+                console.log('[TTS Cache] 保存缓存失败:', e.message);
+            }
+        }
+
+        // PCM 转 WAV
+        function pcmToWav(pcmData, sampleRate, numChannels, bitsPerSample) {
+            const bytesPerSample = bitsPerSample / 8;
+            const blockAlign = numChannels * bytesPerSample;
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = pcmData.byteLength;
+            const headerSize = 44;
+            const totalSize = headerSize + dataSize;
+            
+            const buffer = new ArrayBuffer(totalSize);
+            const view = new DataView(buffer);
+            
+            // RIFF header
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, totalSize - 8, true);
+            writeString(view, 8, 'WAVE');
+            
+            // fmt chunk
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true); // PCM
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true);
+            
+            // data chunk
+            writeString(view, 36, 'data');
+            view.setUint32(40, dataSize, true);
+            
+            // PCM data
+            new Uint8Array(buffer, 44).set(new Uint8Array(pcmData));
+            
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+        
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        // === Fetch Worker: 独立的音频获取任务 ===
+        
+        // 检查数据是否以WAV头开始 (RIFF....WAVE)
+        function hasWavHeader(arrayBuffer) {
+            if (arrayBuffer.byteLength < 12) return false;
+            const view = new DataView(arrayBuffer);
+            const riff = view.getUint32(0, false);
+            const wave = view.getUint32(8, false);
+            return riff === 0x52494646 && wave === 0x57415645;
+        }
+        
+        // 从WAV头中提取采样率
+        function getSampleRateFromWav(arrayBuffer) {
+            if (arrayBuffer.byteLength < 28) return 32000;
+            const view = new DataView(arrayBuffer);
+            return view.getUint32(24, true);
+        }
+        
+        // === 全局流式播放系统：边收边播 ===
+        // 核心思想：一个全局播放队列 + 一个独立播放进程
+        // 任何时候接收到音频片段，都直接加入队列
+        // 播放进程持续从队列中取出并依次播放
+        
+        let globalAudioContext = null;
+        let globalPlayQueue = [];           // 全局播放队列 [{data: Uint8Array, sampleRate: number, index: number}]
+        let globalPlayerRunning = false;    // 全局播放器是否运行中
+        let globalNextPlayTime = 0;         // 下一个chunk的播放时间
+        let globalDefaultSampleRate = 32000; // 默认采样率
+        let globalChunkCount = 0;           // 已播放的chunk计数
+        let globalCurrentPlayingIndex = -1; // 当前正在播放的段落索引
+        
+        function getGlobalAudioContext() {
+            if (!globalAudioContext) {
+                globalAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('[Global AudioContext] 创建新的AudioContext');
+            }
+            return globalAudioContext;
+        }
+        
+        // 将PCM数据加入全局播放队列
+        function enqueueAudioChunk(pcmData, sampleRate = 32000, paragraphIndex = -1) {
+            if (!ttsIsPlaying) {
+                console.log('[Global Queue] 已停止，忽略入队');
+                return;
+            }
+            
+            globalPlayQueue.push({ 
+                type: 'pcm',
+                data: pcmData, 
+                sampleRate: sampleRate, 
+                index: paragraphIndex 
+            });
+            const queueLen = globalPlayQueue.length;
+            console.log('[Global Queue] 入队 chunk size=', pcmData.byteLength, 'rate=', sampleRate, 'idx=', paragraphIndex, 'queueLen=', queueLen);
+            
+            // 如果播放器没在运行，立即启动它
+            if (!globalPlayerRunning && ttsIsPlaying) {
+                console.log('[Global Queue] 播放器未运行，立即启动...');
+                startGlobalPlayer();
+            }
+        }
+        
+        function enqueueFloatChunk(floatData, sampleRate = 32000, paragraphIndex = -1) {
+            if (!ttsIsPlaying) return;
+            globalPlayQueue.push({
+                type: 'float',
+                data: floatData,
+                sampleRate: sampleRate,
+                index: paragraphIndex
+            });
+            if (!globalPlayerRunning && ttsIsPlaying) {
+                startGlobalPlayer();
+            }
+        }
+        
+        // 将AudioBuffer加入全局播放队列
+        function enqueueAudioBuffer(audioBuffer, paragraphIndex = -1) {
+            if (!ttsIsPlaying) return;
+            
+            globalPlayQueue.push({
+                type: 'buffer',
+                data: audioBuffer,
+                index: paragraphIndex
+            });
+            
+            if (!globalPlayerRunning && ttsIsPlaying) {
+                startGlobalPlayer();
+            }
+        }
+        
+        // 全局播放器：独立进程，持续从队列中取出并播放
+        async function startGlobalPlayer() {
+            if (globalPlayerRunning) {
+                console.log('[Global Player] 已在运行中');
+                return;
+            }
+            globalPlayerRunning = true;
+            globalChunkCount = 0;
+            
+            const ctx = getGlobalAudioContext();
+            if (ctx.state === 'suspended') {
+                console.log('[Global Player] AudioContext suspended，正在resume...');
+                await ctx.resume();
+            }
+            
+            globalNextPlayTime = ctx.currentTime;
+            console.log('[Global Player] 启动，currentTime=', ctx.currentTime.toFixed(3));
+            
+            while (globalPlayerRunning && ttsIsPlaying) {
+                // 从队列取出数据
+                const item = globalPlayQueue.shift();
+                
+                if (!item) {
+                    // 队列空了，短暂等待新数据（20ms更快响应）
+                    await new Promise(r => setTimeout(r, 20));
+                    continue;
+                }
+                
+                // 将PCM数据转为AudioBuffer并播放
+                try {
+                    const paragraphIndex = item.index;
+                    
+                    // 更新当前播放的段落索引（用于UI高亮）
+                    if (paragraphIndex >= 0 && paragraphIndex !== globalCurrentPlayingIndex) {
+                        globalCurrentPlayingIndex = paragraphIndex;
+                        const para = ttsParagraphs[paragraphIndex];
+                        if (para) {
+                            updateTTSStatus('正在朗读: ' + para.text.substring(0, 30) + '...');
+                            highlightParagraph(paragraphIndex, 'smooth');
+                        }
+                    }
+                    
+                    let audioBuffer;
+                    
+                    if (item.type === 'buffer') {
+                        // 直接使用预解码的 AudioBuffer
+                        audioBuffer = item.data;
+                    } else if (item.type === 'float') {
+                        const floatData = item.data;
+                        const sampleRate = item.sampleRate;
+                        audioBuffer = ctx.createBuffer(1, floatData.length, sampleRate);
+                        audioBuffer.getChannelData(0).set(floatData);
+                    } else {
+                        // PCM 转换
+                        const chunk = item.data;
+                        const sampleRate = item.sampleRate;
+                        
+                        // PCM 16-bit signed little-endian 转为 Float32
+                        const pcmData = new Int16Array(chunk.buffer, chunk.byteOffset, chunk.byteLength / 2);
+                        const floatData = new Float32Array(pcmData.length);
+                        for (let i = 0; i < pcmData.length; i++) {
+                            floatData[i] = pcmData[i] / 32768.0;
+                        }
+                        
+                        // 创建AudioBuffer
+                        audioBuffer = ctx.createBuffer(1, floatData.length, sampleRate);
+                        audioBuffer.getChannelData(0).set(floatData);
+                    }
+                    
+                    // 创建并播放source
+                    const source = ctx.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.connect(ctx.destination);
+                    
+                    // 确保连续播放，避免断续
+                    const now = ctx.currentTime;
+                    if (globalNextPlayTime < now) {
+                        // 如果预定时间已过，从现在开始（可能有轻微断续）
+                        console.log('[Global Player] 时间落后，重置 now=', now.toFixed(3), 'was=', globalNextPlayTime.toFixed(3));
+                        globalNextPlayTime = now;
+                    }
+                    
+                    source.start(globalNextPlayTime);
+                    globalChunkCount++;
+                    
+                    const dur = audioBuffer.duration;
+                    console.log('[Global Player] 播放 #' + globalChunkCount + ' dur=' + dur.toFixed(3) + 's startAt=' + globalNextPlayTime.toFixed(3) + ' queueLeft=' + globalPlayQueue.length);
+                    globalNextPlayTime += dur;
+                    
+                    // 等待这个chunk播放完成（可选：让播放更流畅，但会增加延迟）
+                    // 这里我们不等待，让播放连续进行
+                    
+                } catch (e) {
+                    console.error('[Global Player] 播放chunk失败:', e.message, e);
+                }
+            }
+            
+            globalPlayerRunning = false;
+            globalCurrentPlayingIndex = -1;
+            console.log('[Global Player] 停止，共播放', globalChunkCount, '个chunk');
+        }
+        
+        let ttsFetchWorkerPromise = null;
+        let ttsPlaybackWorkerPromise = null;
+
+        // 停止全局播放器
+        async function stopGlobalPlayer() {
+            console.log('[Global Player] 请求停止，当前队列长度=', globalPlayQueue.length);
+            globalPlayerRunning = false;
+            
+            // 等待播放循环结束（如果正在运行）
+            // 由于 globalPlayer 是基于 while(globalPlayerRunning) 的，设置 false 后它会在当前循环结束后退出
+            // 但为了安全，我们可以简单等待一小会儿，或者如果它也是个 Promise，我们可以 await 它
+            // 这里我们主要关注清理 AudioContext
+            
+            globalPlayQueue = [];
+            globalNextPlayTime = 0;
+            globalChunkCount = 0;
+            globalCurrentPlayingIndex = -1;
+            
+            // 关闭AudioContext以停止所有正在播放的音频
+            if (globalAudioContext) {
+                try {
+                    await globalAudioContext.close();
+                    console.log('[Global AudioContext] 已关闭');
+                } catch (e) {
+                    console.log('[Global AudioContext] 关闭失败:', e.message);
+                }
+                globalAudioContext = null;
+            }
+        }
+        
+        // ... (Stream logic remains similar, but we need to ensure ttsStop calls this)
+
+        // ...
+
+        // Fetch Worker: 持续从队列中取出任务并执行
+        // 在流式模式下，一次只获取一个段落以确保 chunks 按顺序入队
+        async function startFetchWorker() {
+            if (ttsFetchWorkerRunning) return;
+            ttsFetchWorkerRunning = true;
+            console.log('[TTS Fetch Worker] 启动');
+            
+            const isStreaming = document.getElementById('gptsovits-streaming')?.checked;
+            
+            while (ttsFetchWorkerRunning && ttsIsPlaying) {
+                // 取出下一个待获取的索引
+                const index = ttsFetchQueue.shift();
+                
+                if (index === undefined) {
+                    // 队列为空，检查是否需要预加载下一章
+                    checkStartNextChapterPreload();
+                    await new Promise(r => setTimeout(r, 100));
+                    continue;
+                }
+                
+                // 跳过已有音频的索引
+                if (ttsReadyQueue[index]) {
+                    continue;
+                }
+                
+                // 流式模式下，等待 globalPlayer 播放完当前段落再获取下一个
+                // 确保 chunks 不会交错
+                // 修正：允许预加载下两个段落，避免卡顿
+                if (isStreaming && globalPlayerRunning && index > ttsNextPlayIndex + 2) {
+                    console.log('[TTS Fetch] 流式模式等待播放进度... idx=', index, 'nextPlay=', ttsNextPlayIndex);
+                    ttsFetchQueue.unshift(index);  // 放回队首
+                    await new Promise(r => setTimeout(r, 100));
+                    continue;
+                }
+                
+                try {
+                    const blob = await fetchAudioForIndex(index);
+                    
+                    if (blob) {
+                        ttsReadyQueue[index] = blob;
+                        ttsRetryCount[index] = 0;
+                        currentChapterFetchedCount++;
+                        
+                        // 通知 Playback Worker 有新音频可用
+                        if (!ttsPlaybackWorkerRunning && ttsIsPlaying) {
+                            ttsPlaybackWorkerPromise = startPlaybackWorker();
+                        }
+                        
+                        // 检查是否可以开始预加载下一章
+                        checkStartNextChapterPreload();
+                    } else {
+                        // 返回 null 但没抛异常，可能是段落问题
+                        console.log('[TTS Fetch] 索引无效或无内容 idx=', index);
+                        currentChapterFetchedCount++; // 也计数，避免卡住
+                    }
+                    
+                } catch (e) {
+                    // 如果是主动取消，不再重试
+                    if (e.message === 'ABORTED') {
+                        continue;
+                    }
+                    
+                    // 失败重试
+                    const retries = (ttsRetryCount[index] || 0) + 1;
+                    ttsRetryCount[index] = retries;
+                    
+                    if (retries <= TTS_MAX_RETRY) {
+                        console.log('[TTS Fetch] 重试 idx=', index, '次数=', retries);
+                        updateTTSStatus('获取失败，正在重试 (' + retries + '/' + TTS_MAX_RETRY + ')...');
+                        // 延迟后重新加入队列
+                        await new Promise(r => setTimeout(r, 1000 * retries));
+                        if (ttsIsPlaying) {
+                            ttsFetchQueue.unshift(index);  // 加到队首优先重试
+                        }
+                    } else {
+                        // 重试次数用尽
+                        console.error('[TTS Fetch] 重试次数用尽 idx=', index);
+                        updateTTSStatus('错误: 段落 ' + (index + 1) + ' 获取失败（已重试' + TTS_MAX_RETRY + '次）');
+                        ttsHasError = true;
+                        // 标记为错误，让 Playback Worker 跳过
+                        ttsReadyQueue[index] = 'ERROR';
+                    }
+                }
+            }
+            
+            ttsFetchWorkerRunning = false;
+            console.log('[TTS Fetch Worker] 停止');
+        }
+
+        // ...
+
+        
+        // 流式接收并实时播放：接收到chunk立即加入队列
+        async function streamReceiveAndPlay(response, index) {
+            const reader = response.body.getReader();
+            let isFirstChunk = true;
+            let sampleRate = globalDefaultSampleRate;
+            let allChunks = [];
+            let totalLength = 0;
+            let hasWavHeaderFlag = false;
+            let chunkCount = 0;
+            
+            console.log('[Stream] 开始接收 idx=', index, '段落:', ttsParagraphs[index]?.text?.substring(0, 30) + '...');
+            
+            // 更新UI显示当前正在接收的段落
+            const para = ttsParagraphs[index];
+            if (para) {
+                ttsCurrentIndex = index;
+                updateTTSProgress();
+            }
+            
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        console.log('[Stream] 读取完成 idx=', index, '共', chunkCount, '个chunk');
+                        break;
+                    }
+                    if (!ttsIsPlaying) {
+                        console.log('[Stream] 播放已停止，取消接收 idx=', index);
+                        reader.cancel();
+                        break;
+                    }
+                    
+                    chunkCount++;
+                    
+                    // 保存用于最后生成blob
+                    allChunks.push(value);
+                    totalLength += value.length;
+                    
+                    // 第一个chunk检查WAV头
+                    if (isFirstChunk) {
+                        const tempBuffer = value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
+                        if (hasWavHeader(tempBuffer)) {
+                            hasWavHeaderFlag = true;
+                            sampleRate = getSampleRateFromWav(tempBuffer);
+                            console.log('[Stream] 检测到WAV头, 采样率=', sampleRate);
+                            // WAV头后面的数据是PCM，跳过44字节头
+                            if (value.length > 44) {
+                                const pcmData = value.slice(44);
+                                enqueueAudioChunk(pcmData, sampleRate, index);
+                                console.log('[Stream] #' + chunkCount + ' 入队(跳过头) size=', pcmData.length, 'total=', totalLength);
+                            }
+                        } else {
+                            enqueueAudioChunk(value, sampleRate, index);
+                            console.log('[Stream] #' + chunkCount + ' 入队 size=', value.length, 'total=', totalLength);
+                        }
+                        isFirstChunk = false;
+                    } else {
+                        // 后续chunks都是PCM数据，直接入队
+                        enqueueAudioChunk(value, sampleRate, index);
+                        console.log('[Stream] #' + chunkCount + ' 入队 size=', value.length, 'total=', totalLength);
+                    }
+                    
+                    // 更新接收状态
+                    updateTTSStatus('正在接收: ' + para.text.substring(0, 20) + '... (' + (totalLength / 1024).toFixed(0) + 'KB)');
+                }
+                
+                console.log('[Stream] 接收完成 idx=', index, 'total=', totalLength);
+                
+                // 合并所有chunks生成完整blob（用于缓存）
+                const result = new Uint8Array(totalLength);
+                let offset = 0;
+                for (const chunk of allChunks) {
+                    result.set(chunk, offset);
+                    offset += chunk.length;
+                }
+                
+                let blob;
+                if (hasWavHeaderFlag) {
+                    blob = new Blob([result], { type: 'audio/wav' });
+                } else {
+                    blob = pcmToWav(result.buffer, sampleRate, 1, 16);
+                }
+                
+                return blob;
+                
+            } catch (e) {
+                console.error('[Stream] 接收错误:', e);
+                throw e;
+            }
+        }
+        
+        // 兼容旧接口
+        async function streamPlayAudio(response, index) {
+            return await streamReceiveAndPlay(response, index);
+        }
+        
+        // 非流式收集（用于预加载下一章等场景，不播放）
+        async function collectStreamData(response) {
+            const reader = response.body.getReader();
+            const chunks = [];
+            let totalLength = 0;
+            
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                    totalLength += value.length;
+                }
+                
+                const result = new Uint8Array(totalLength);
+                let offset = 0;
+                for (const chunk of chunks) {
+                    result.set(chunk, offset);
+                    offset += chunk.length;
+                }
+                
+                if (hasWavHeader(result.buffer)) {
+                    return new Blob([result], { type: 'audio/wav' });
+                } else {
+                    return pcmToWav(result.buffer, 32000, 1, 16);
+                }
+            } catch (e) {
+                console.error('[Stream] 收集数据错误:', e);
+                throw e;
+            }
+        }
+        
+        // 独立的 AbortController 管理器，用于强制取消请求
+        const abortControllers = new Map(); // requestId -> AbortController
+
+        async function fetchAudioForIndex(index) {
+            if (index >= ttsParagraphs.length) return null;
+            
+            const para = ttsParagraphs[index];
+            console.log('[TTS Fetch] 开始获取 idx=', index);
+            
+            // 非流式模式下检查缓存
+            const engine = document.getElementById('tts-engine')?.value || 'edge';
+            const isStreaming = engine === 'gptsovits' && document.getElementById('gptsovits-streaming')?.checked;
+            if (!isStreaming) {
+                const cached = await getCachedAudio(index);
+                if (cached) {
+                    console.log('[TTS Fetch] 缓存命中 idx=', index);
+                    return cached;
+                }
+                try {
+                    const t = para.text;
+                    if (window.TTS && typeof window.TTS.getPreloadBlobByText === 'function') {
+                        const localBlob = await window.TTS.getPreloadBlobByText(t);
+                        if (localBlob) {
+                            console.log('[TTS Fetch] 本地预加载命中 idx=', index);
+                            return localBlob;
+                        }
+                    }
+                } catch {}
+            }
+            if (isStreaming) {
+                try {
+                    const t = para.text;
+                    if (window.TTS && typeof window.TTS.getPreloadBlobByText === 'function') {
+                        const localBlob = await window.TTS.getPreloadBlobByText(t);
+                        if (localBlob) {
+                            console.log('[TTS Fetch] 流式模式本地预加载命中 idx=', index);
+                            return localBlob;
+                        }
+                    }
+                } catch {}
+            }
+            
+            try {
+                const blob = await window.TTS.fetchAudioViaWorker(index);
+                if (blob) {
+                    await cacheAudio(index, blob);
+                }
+                return blob;
+            } catch (e) {
+                if (e.message === 'ABORTED') {
+                    throw e;
+                }
+                console.error('[TTS Fetch] 失败 idx=', index, e);
+                throw e;
+            }
+        }
+        
+        // 取消所有正在进行的请求
+        function abortAllFetches() {
+            console.log('[TTS] 取消所有正在进行的请求:', abortControllers.size);
+            try { window.TTS && window.TTS.abortFetchWorker && window.TTS.abortFetchWorker(); } catch (e) {}
+            for (const [id, controller] of abortControllers) {
+                try { controller.abort(); } catch (e) {}
+            }
+            abortControllers.clear();
+        }
+        
+        // Fetch Worker: 持续从队列中取出任务并执行
+        // 在流式模式下，一次只获取一个段落以确保 chunks 按顺序入队
+        async function startFetchWorker() {
+            if (ttsFetchWorkerRunning) return;
+            ttsFetchWorkerRunning = true;
+            console.log('[TTS Fetch Worker] 启动');
+            
+            const isStreaming = document.getElementById('gptsovits-streaming')?.checked;
+            
+            while (ttsFetchWorkerRunning && ttsIsPlaying) {
+                // 取出下一个待获取的索引
+                const index = ttsFetchQueue.shift();
+                
+                if (index === undefined) {
+                    // 队列为空，检查是否需要预加载下一章
+                    checkStartNextChapterPreload();
+                    await new Promise(r => setTimeout(r, 100));
+                    continue;
+                }
+                
+                // 跳过已有音频的索引
+                if (ttsReadyQueue[index]) {
+                    continue;
+                }
+                
+                // 流式模式下，等待 globalPlayer 播放完当前段落再获取下一个
+                // 确保 chunks 不会交错
+                // 修正：允许预加载下两个段落，避免卡顿
+                if (isStreaming && globalPlayerRunning && index > ttsNextPlayIndex + 2) {
+                    console.log('[TTS Fetch] 流式模式等待播放进度... idx=', index, 'nextPlay=', ttsNextPlayIndex);
+                    ttsFetchQueue.unshift(index);  // 放回队首
+                    await new Promise(r => setTimeout(r, 100));
+                    continue;
+                }
+                
+                try {
+                    const blob = await fetchAudioForIndex(index);
+                    
+                    if (blob) {
+                        ttsReadyQueue[index] = blob;
+                        ttsRetryCount[index] = 0;
+                        currentChapterFetchedCount++;
+                        
+                        // 通知 Playback Worker 有新音频可用
+                        if (!ttsPlaybackWorkerRunning && ttsIsPlaying) {
+                            startPlaybackWorker();
+                        }
+                        
+                        // 检查是否可以开始预加载下一章
+                        checkStartNextChapterPreload();
+                    } else {
+                        // 返回 null 但没抛异常，可能是段落问题
+                        console.log('[TTS Fetch] 索引无效或无内容 idx=', index);
+                        currentChapterFetchedCount++; // 也计数，避免卡住
+                    }
+                    
+                } catch (e) {
+                    // 如果是主动取消，不再重试
+                    if (e.message === 'ABORTED') {
+                        continue;
+                    }
+                    
+                    // 失败重试
+                    const retries = (ttsRetryCount[index] || 0) + 1;
+                    ttsRetryCount[index] = retries;
+                    
+                    if (retries <= TTS_MAX_RETRY) {
+                        console.log('[TTS Fetch] 重试 idx=', index, '次数=', retries);
+                        updateTTSStatus('获取失败，正在重试 (' + retries + '/' + TTS_MAX_RETRY + ')...');
+                        // 延迟后重新加入队列
+                        await new Promise(r => setTimeout(r, 1000 * retries));
+                        if (ttsIsPlaying) {
+                            ttsFetchQueue.unshift(index);  // 加到队首优先重试
+                        }
+                    } else {
+                        // 重试次数用尽
+                        console.error('[TTS Fetch] 重试次数用尽 idx=', index);
+                        updateTTSStatus('错误: 段落 ' + (index + 1) + ' 获取失败（已重试' + TTS_MAX_RETRY + '次）');
+                        ttsHasError = true;
+                        // 标记为错误，让 Playback Worker 跳过
+                        ttsReadyQueue[index] = 'ERROR';
+                    }
+                }
+            }
+            
+            ttsFetchWorkerRunning = false;
+            console.log('[TTS Fetch Worker] 停止');
+        }
+        
+        // === Playback Worker: 独立的音频播放任务 ===
+        async function startPlaybackWorker() {
+            if (ttsPlaybackWorkerRunning) return;
+            ttsPlaybackWorkerRunning = true;
+            console.log('[TTS Playback Worker] 启动');
+            
+            while (ttsPlaybackWorkerRunning && ttsIsPlaying) {
+                // 检查是否朗读完成
+                if (ttsNextPlayIndex >= ttsParagraphs.length) {
+                    console.log('[TTS Playback] 章节朗读完成');
+                    ttsPlaybackWorkerRunning = false;
+                    ttsStop(true);  // 章节结束
+                    return;
+                }
+                
+                const index = ttsNextPlayIndex;
+                const audioData = ttsReadyQueue[index];
+                
+                if (!audioData) {
+                    // 音频还没准备好，等待
+                    await new Promise(r => setTimeout(r, 50));
+                    continue;
+                }
+                
+                // 检查是否是错误标记
+                if (audioData === 'ERROR') {
+                    console.log('[TTS Playback] 跳过错误段落 idx=', index);
+                    delete ttsReadyQueue[index];
+                    ttsNextPlayIndex++;
+                    ttsCurrentIndex = ttsNextPlayIndex;
+                    updateTTSProgress();
+                    continue;
+                }
+                
+                // 更新UI
+                const para = ttsParagraphs[index];
+                ttsCurrentIndex = index;
+                updateTTSStatus('正在朗读: ' + para.text.substring(0, 30) + '...');
+                updateTTSProgress();
+                highlightParagraph(index, 'smooth');
+                saveProgressToServer(CHAPTER_INDEX, index);
+                
+                // 检查是否已经流式播放过
+                if (audioData._streamPlayed) {
+                    console.log('[TTS Playback] 已流式播放 idx=', index);
+                    // 流式数据已经入队，这里只需进行流控
+                    // 如果队列太长，等待播放器消耗
+                    while (ttsIsPlaying && globalPlayQueue.length > 50) { // 流式chunk多，阈值大一点
+                        await new Promise(r => setTimeout(r, 100));
+                    }
+                } else {
+                    // 播放音频 (Blob)
+                    try {
+                        // 限制队列长度，防止预解码过多音频
+                        while (ttsIsPlaying && globalPlayQueue.length > 2) {
+                            await new Promise(r => setTimeout(r, 100));
+                        }
+                        
+                        await playAudioBlob(audioData, index);
+                        console.log('[TTS Playback] 入队完成 idx=', index);
+                    } catch (e) {
+                        console.error('[TTS Playback] 播放异常 idx=', index, e);
+                        // 播放失败也继续下一个
+                    }
+                }
+                
+                // 清理已播放的音频
+                delete ttsReadyQueue[index];
+                ttsNextPlayIndex++;
+                
+                // 播放完成后保存进度（确保进度是最新的）
+                saveProgressToServer(CHAPTER_INDEX, ttsNextPlayIndex);
+                
+                // 添加更多任务到获取队列
+                enqueueMoreFetches();
+            }
+            
+            ttsPlaybackWorkerRunning = false;
+            console.log('[TTS Playback Worker] 停止');
+        }
+        
+        // 播放单个音频Blob（通过GlobalPlayer）
+        async function playAudioBlob(blob, index) {
+            if (!ttsIsPlaying) return;
+            
+            try {
+                // 将 Blob 解码为 AudioBuffer
+                const arrayBuffer = await blob.arrayBuffer();
+                const ctx = getGlobalAudioContext();
+                
+                // 解码音频数据
+                const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+                
+                // 加入全局队列
+                enqueueAudioBuffer(audioBuffer, index);
+                
+                return;
+            } catch (e) {
+                console.error('音频解码失败:', e);
+                throw e;
+            }
+        }
+        
+        // 下一章预加载相关
+        let nextChapterParagraphs = [];  // 下一章的段落
+        let nextChapterFetching = false; // 是否正在预加载下一章
+        let currentChapterAllEnqueued = false; // 当前章节是否所有段落都已入队
+        let currentChapterFetchedCount = 0;    // 当前章节已获取完成的数量
+        let nextPreloadTimer = null;
+        
+        // 添加更多获取任务到队列
+        function enqueueMoreFetches() {
+            // 计算需要预加载的范围
+            const startIdx = ttsNextPlayIndex;
+            let endIdx;
+            
+            if (TTS_PRELOAD_COUNT <= 0) {
+                // 不限制，预加载所有当前章节
+                endIdx = ttsParagraphs.length;
+            } else {
+                endIdx = Math.min(startIdx + TTS_PRELOAD_COUNT + 1, ttsParagraphs.length);
+            }
+            
+            for (let i = startIdx; i < endIdx; i++) {
+                // 如果还没有在队列中且还没有就绪
+                if (!ttsReadyQueue[i] && !ttsFetchQueue.includes(i)) {
+                    ttsFetchQueue.push(i);
+                }
+            }
+            
+            // 检查当前章节是否全部入队完成
+            if (endIdx >= ttsParagraphs.length) {
+                currentChapterAllEnqueued = true;
+            }
+        }
+        
+        // 检查是否应该开始预加载下一章
+        function checkStartNextChapterPreload() {
+            if (!currentChapterAllEnqueued) return;
+            if (nextChapterFetching || nextChapterParagraphs.length > 0) return;
+            if (!ttsAutoAdvance || CHAPTER_INDEX >= TOTAL_CHAPTERS - 1) return;
+            
+            // 当前章节所有段落都已获取完成
+            if (currentChapterFetchedCount >= ttsParagraphs.length) {
+                console.log('[TTS] 当前章节全部获取完成，开始预加载下一章');
+                preloadNextChapter();
+            }
+        }
+        
+        // 预加载下一章的段落
+        async function preloadNextChapter() {
+            if (nextChapterFetching || nextChapterParagraphs.length > 0) return;
+            nextChapterFetching = true;
+            
+            console.log('[TTS] 开始预加载下一章...');
+            updateTTSStatus('预加载下一章...');
+            
+            try {
+                // 获取下一章的HTML内容
+                const nextChapterIdx = CHAPTER_INDEX + 1;
+                const resp = await fetch(`/read/${BOOK_ID}/${nextChapterIdx}`);
+                if (!resp.ok) {
+                    console.log('[TTS] 获取下一章失败');
+                    nextChapterFetching = false;
+                    return;
+                }
+                
+                const html = await resp.text();
+                
+                // 解析HTML提取段落
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const content = doc.getElementById('book-content');
+                
+                if (!content) {
+                    console.log('[TTS] 下一章无内容');
+                    nextChapterFetching = false;
+                    return;
+                }
+                
+                // 提取段落文本（复用相同的逻辑）
+                const paragraphElements = content.querySelectorAll(TTS_PARAGRAPH_SELECTORS);
+                const processedTexts = new Set();
+                
+                paragraphElements.forEach(element => {
+                    if (shouldSkipElement(element)) return;
+                    const nestedParagraphs = element.querySelectorAll(TTS_PARAGRAPH_SELECTORS);
+                    if (nestedParagraphs.length > 0) return;
+                    
+                    let text = extractTextFromElement(element);
+                    text = cleanTextForTTS(text);
+                    
+                    if (text.length >= 1 && !processedTexts.has(text)) {
+                        processedTexts.add(text);
+                        nextChapterParagraphs.push({ text: text });
+                    }
+                });
+                
+                console.log('[TTS] 下一章有', nextChapterParagraphs.length, '个段落');
+                
+                if (nextChapterParagraphs.length > 0) {
+                    try {
+                        const texts = nextChapterParagraphs.map(p => p.text);
+                        window.TTS.startPreloadQueue(texts);
+                        try { if (nextPreloadTimer) clearInterval(nextPreloadTimer); } catch {}
+                        nextPreloadTimer = setInterval(() => { try { updateNextPreloadDisplay(); } catch {} }, 1500);
+                    } catch (e) {}
+                }
+                
+            } catch (e) {
+                console.error('[TTS] 预加载下一章失败:', e);
+            }
+            
+            nextChapterFetching = false;
+        }
+        
+        // 预加载下一章的音频
+        async function preloadNextChapterAudio() {
+            try {
+                const texts = nextChapterParagraphs.map(p => p.text);
+                window.TTS.startPreloadQueue(texts);
+                try { if (nextPreloadTimer) clearInterval(nextPreloadTimer); } catch {}
+                nextPreloadTimer = setInterval(() => { try { updateNextPreloadDisplay(); } catch {} }, 1500);
+            } catch (e) {}
+        }
+
+        async function updateNextPreloadDisplay() {
+            try {
+                if (ttsIsPlaying) return;
+                const texts = nextChapterParagraphs.map(p => p.text);
+                let done = 0;
+                for (const t of texts) {
+                    try {
+                        const b = await (window.TTS && typeof window.TTS.getPreloadBlobByText === 'function' ? window.TTS.getPreloadBlobByText(t) : null);
+                        if (b) done++;
+                    } catch {}
+                }
+                if (texts.length > 0) updateTTSStatus('下一章预加载: ' + done + '/' + texts.length);
+            } catch {}
+        }
+
+        // 检测当前章节是否需要跳过（目录或版权）
+        function shouldSkipCurrentChapter() {
+            const content = document.getElementById('book-content');
+            if (!content) return false;
+            
+            const text = content.textContent.toLowerCase();
+            const title = document.title.toLowerCase();
+            
+            // 检测目录章节
+            if (ttsSkipToc) {
+                const tocKeywords = ['目录', '目 录', '目錄', '目　錄', 'contents', 'table of contents', 'toc'];
+                let hasKeyword = false;
+                for (const kw of tocKeywords) {
+                    if (title.includes(kw) || text.includes(kw)) { hasKeyword = true; break; }
+                }
+                let hasHeading = false;
+                try {
+                    const heads = content.querySelectorAll('h1,h2,h3');
+                    for (const h of heads) {
+                        const t = (h.textContent || '').trim().toLowerCase();
+                        for (const kw of tocKeywords) { if (t.includes(kw)) { hasHeading = true; break; } }
+                        if (hasHeading) break;
+                    }
+                } catch {}
+                let isTocStructure = false;
+                try {
+                    const els = content.querySelectorAll((window.TTS_PARAGRAPH_SELECTORS || 'p, li, a, div'));
+                    let total = 0, hits = 0;
+                    const re = /^(第[一二三四五六七八九十百千\d]+[章节卷]|chapter\s*\d+|section\s*\d+|part\s*\d+)/i;
+                    for (const el of els) {
+                        const s = (el.textContent || '').trim();
+                        if (!s) continue;
+                        total++;
+                        const sl = s.toLowerCase();
+                        if (sl.length <= 80 && (re.test(sl) || /\.{2,}/.test(sl))) hits++;
+                    }
+                    if (total >= 10 && hits / total >= 0.3) isTocStructure = true;
+                } catch {}
+                let listRatioHigh = false;
+                let numericRunStyle = false;
+                try {
+                    const items = Array.from(content.querySelectorAll('li'));
+                    const paras = Array.from(content.querySelectorAll('p, li, div'));
+                    const ratio = items.length / Math.max(1, paras.length);
+                    if (paras.length >= 10 && ratio >= 0.5) listRatioHigh = true;
+                    const lines = paras.map(el => (el.textContent || '').trim()).filter(Boolean);
+                    let run = 0, maxRun = 0;
+                    const numStart = /^(?:\d{1,3}(?:[\.:、]\d{1,3})*|[ivxlcdm]{1,8}|第[一二三四五六七八九十百千\d]+)(?:[\.)、\s]|$)/i;
+                    for (const ln of lines) {
+                        if (ln.length <= 50 && numStart.test(ln)) { run++; maxRun = Math.max(maxRun, run); } else { run = 0; }
+                    }
+                    if (lines.length >= 12 && maxRun >= 6) numericRunStyle = true;
+                } catch {}
+                let linkDensityHigh = false;
+                let anchorStyle = false;
+                let pageNumberStyle = false;
+                try {
+                    const anchors = content.querySelectorAll('a[href]');
+                    const paragraphs = content.querySelectorAll('p, li, div');
+                    const linkDensity = anchors.length / Math.max(1, paragraphs.length);
+                    if (linkDensity >= 0.3) linkDensityHigh = true;
+                    const anchorTargets = content.querySelectorAll('a[href^="#"]');
+                    if (anchorTargets.length / Math.max(1, anchors.length) >= 0.5) anchorStyle = true;
+                    let pnHits = 0, pnTotal = 0;
+                    for (const el of paragraphs) {
+                        const tx = (el.textContent || '').trim();
+                        if (!tx) continue; pnTotal++;
+                        if(/[\.·\s]{2,}\s*(\d{1,4}|[ivxlcdm]{1,8})$/i.test(tx)) pnHits++;
+                    }
+                    if (pnTotal >= 10 && pnHits / pnTotal >= 0.2) pageNumberStyle = true;
+                } catch {}
+                if (hasKeyword || hasHeading || isTocStructure || listRatioHigh || numericRunStyle || linkDensityHigh || anchorStyle || pageNumberStyle) {
+                    console.log('[TTS] 检测到目录章节，跳过');
+                    return true;
+                }
+            }
+            
+            // 检测版权章节
+            if (ttsSkipCopyright) {
+                const copyrightKeywords = ['版权', '版权信息', 'copyright', '出版信息', '图书在版编目', 'isbn'];
+                for (const kw of copyrightKeywords) {
+                    if (title.includes(kw) || text.includes(kw)) {
+                        console.log('[TTS] 检测到版权章节，跳过');
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+
+        // === 主控制函数 ===
+        async function ttsPlay(forceRestart = false, manualStartIndex = null) {
+            console.log('[TTS] play clicked, manualStart=', manualStartIndex, 'preload=', TTS_PRELOAD_COUNT, 'engine=', document.getElementById('tts-engine').value);
+            updateTTSStatus('正在准备朗读...');
+            
+            // 检查是否需要跳过当前章节
+            if (shouldSkipCurrentChapter()) {
+                if (ttsAutoAdvance && CHAPTER_INDEX < TOTAL_CHAPTERS - 1) {
+                    updateTTSStatus('跳过当前章节，跳转下一章...');
+                    setTimeout(() => {
+                        window.location.href = '/read/' + BOOK_ID + '/' + (CHAPTER_INDEX + 1) + '?autoplay=1';
+                    }, 500);
+                    return;
+                }
+            }
+            
+            // 初始化段落
+            if (ttsParagraphs.length === 0) {
+                initTTSParagraphs(false);  // 不在这里预加载
+            }
+            
+            // 无段落则尝试自动翻页
+            if (ttsParagraphs.length === 0) {
+                updateTTSStatus('未找到可朗读的正文段落');
+                if (ttsAutoAdvance && CHAPTER_INDEX < TOTAL_CHAPTERS - 1) {
+                    updateTTSStatus('本章无正文段落，正在跳转下一章...');
+                    setTimeout(() => {
+                        window.location.href = '/read/' + BOOK_ID + '/' + (CHAPTER_INDEX + 1) + '?autoplay=1';
+                    }, 800);
+                }
+                return;
+            }
+            
+            // 如果有暂停的音频，继续播放（除非 forceRestart）
+            if (!forceRestart && globalAudioContext && globalAudioContext.state === 'suspended' && !ttsHasError) {
+                console.log('[TTS] 恢复播放');
+                ttsIsPlaying = true;
+                await globalAudioContext.resume();
+                
+                document.getElementById('tts-play').style.display = 'none';
+                document.getElementById('tts-pause').style.display = 'inline-block';
+                
+                if (ttsParagraphs[ttsCurrentIndex]) {
+                    updateTTSStatus('正在朗读: ' + ttsParagraphs[ttsCurrentIndex].text.substring(0, 30) + '...');
+                    highlightParagraph(ttsCurrentIndex, 'center');
+                }
+                updateTTSProgress();
+                
+                // 恢复 workers 和播放器
+                if (!ttsFetchWorkerRunning) ttsFetchWorkerPromise = startFetchWorker();
+                if (!ttsPlaybackWorkerRunning) ttsPlaybackWorkerPromise = startPlaybackWorker();
+                if (!globalPlayerRunning) startGlobalPlayer();
+                
+                return;
+            }
+            
+            // 确定起始段落
+            // 优先级：
+            // 1. manualStartIndex (参数传入)
+            // 2. window.ttsForceStartIndex (兼容旧逻辑)
+            // 3. 服务器保存的进度
+            // 4. 默认 0
+            
+            let startIndex = -1;
+            
+            if (typeof manualStartIndex === 'number' && manualStartIndex >= 0) {
+                startIndex = manualStartIndex;
+            } else if (typeof window.ttsForceStartIndex === 'number' && window.ttsForceStartIndex >= 0) {
+                startIndex = window.ttsForceStartIndex;
+            }
+            
+            // 如果没有强制起始段落，则尝试读取保存的进度
+            if (startIndex === -1) {
+                try {
+                    const resp = await fetch('/api/progress?book_id=' + encodeURIComponent(BOOK_ID));
+                    if (resp.ok) {
+                        const progress = await resp.json();
+                        if (progress && progress.chapter_index === CHAPTER_INDEX && progress.paragraph_index > 0) {
+                            startIndex = progress.paragraph_index;
+                            if (startIndex < ttsParagraphs.length) {
+                                console.log('[TTS] 恢复进度: 第', startIndex + 1, '段');
+                                updateTTSStatus('从第 ' + (startIndex + 1) + ' 段继续朗读...');
+                            } else {
+                                startIndex = 0;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.log('[TTS] 读取进度失败:', e);
+                }
+            }
+            
+            // 默认从头开始
+            if (startIndex === -1) {
+                startIndex = 0;
+            }
+            
+            ttsHasError = false;
+            ttsIsPlaying = true;
+            ttsCurrentIndex = startIndex;
+            ttsNextPlayIndex = startIndex;
+            ttsFetchQueue = [];
+            ttsReadyQueue = {};
+            ttsRetryCount = {};
+            currentChapterAllEnqueued = false;
+            currentChapterFetchedCount = 0;
+            nextChapterParagraphs = [];
+            try { window.TTS.clearPreloadCache(); } catch {}
+            try { if (nextPreloadTimer) clearInterval(nextPreloadTimer); } catch {}
+            nextPreloadTimer = null;
+            nextChapterFetching = false;
+            
+            document.getElementById('tts-play').style.display = 'none';
+            document.getElementById('tts-pause').style.display = 'inline-block';
+            
+            // 高亮起始段落
+            if (startIndex > 0) {
+                highlightParagraph(startIndex, 'smooth');
+            }
+            
+            // 添加初始获取任务
+            enqueueMoreFetches();
+            
+            // 启动两个独立的 Worker
+            ttsFetchWorkerPromise = startFetchWorker();
+            ttsPlaybackWorkerPromise = startPlaybackWorker();
+        }
+
+        async function ttsPause() {
+            ttsIsPlaying = false;
+            
+            // 暂停 AudioContext，保留队列
+            if (globalAudioContext) {
+                try {
+                    await globalAudioContext.suspend();
+                    console.log('[TTS] AudioContext suspended');
+                } catch (e) {
+                    console.error('[TTS] Suspend failed:', e);
+                }
+            }
+            
+            // Workers 会自动检测 ttsIsPlaying 并停止循环
+            // 但我们需要保留 ttsFetchQueue 和 ttsReadyQueue 以便恢复
+            
+            document.getElementById('tts-play').style.display = 'inline-block';
+            document.getElementById('tts-pause').style.display = 'none';
+            
+            const para = ttsParagraphs[ttsCurrentIndex];
+            if (para) {
+                updateTTSStatus('已暂停: ' + para.text.substring(0, 30) + '...');
+                highlightParagraph(ttsCurrentIndex, 'auto');
+            } else {
+                updateTTSStatus('已暂停');
+            }
+        }
+
+        async function ttsStop(isChapterEnd = false) {
+            ttsIsPlaying = false;
+            try { window.TTS && window.TTS.stopPreloadQueue && window.TTS.stopPreloadQueue(); } catch {}
+            
+            // 停止全局流式播放器
+            await stopGlobalPlayer();
+            
+            // 等待 workers 退出
+            if (ttsFetchWorkerPromise) {
+                await ttsFetchWorkerPromise;
+                ttsFetchWorkerPromise = null;
+            }
+            if (ttsPlaybackWorkerPromise) {
+                await ttsPlaybackWorkerPromise;
+                ttsPlaybackWorkerPromise = null;
+            }
+            
+            ttsFetchWorkerRunning = false;
+            ttsPlaybackWorkerRunning = false;
+            
+            // 清理队列和状态
+            ttsCurrentIndex = 0;
+            ttsNextPlayIndex = 0;
+            ttsFetchQueue = [];
+            ttsReadyQueue = {};
+            ttsRetryCount = {};
+            currentChapterAllEnqueued = false;
+            currentChapterFetchedCount = 0;
+            nextChapterParagraphs = [];
+            try { window.TTS.clearPreloadCache(); } catch {}
+            try { if (nextPreloadTimer) clearInterval(nextPreloadTimer); } catch {}
+            nextPreloadTimer = null;
+            nextChapterFetching = false;
+            
+            // 强制取消所有挂起的网络请求
+            abortAllFetches();
+            
+            document.getElementById('tts-play').style.display = 'inline-block';
+            document.getElementById('tts-pause').style.display = 'none';
+            document.querySelectorAll('.tts-highlight').forEach(el => {
+                el.classList.remove('tts-highlight');
+            });
+            updateTTSProgress();
+            
+            // 如果是章节结束且开启了自动翻页
+            if (isChapterEnd && ttsAutoAdvance && CHAPTER_INDEX < TOTAL_CHAPTERS - 1) {
+                updateTTSStatus('本章朗读完成，正在跳转下一章...');
+                setTimeout(() => {
+                    window.location.href = '/read/' + BOOK_ID + '/' + (CHAPTER_INDEX + 1) + '?autoplay=1';
+                }, 1500);
+            } else if (isChapterEnd) {
+                updateTTSStatus('全书朗读完成');
+            } else {
+                updateTTSStatus('已停止');
+            }
+        }
+        
+        // 为了向后兼容，保留这个函数但它不再被使用
+        function startPreloading() {
+            // 由新的队列系统自动处理
+        }
+        
+        // 清除TTS音频缓存
+        async function clearTTSCache() {
+            if (!confirm('确定要清除所有TTS音频缓存吗？\n\n这将删除所有已缓存音频，下次播放需要重新生成。')) {
+                return;
+            }
+            
+            try {
+                // 调用服务端 API 清除缓存
+                const response = await fetch('/api/tts/cache', { method: 'DELETE' });
+                const result = await response.json();
+                
+                // 清除内存中的队列和缓存状态
+                ttsReadyQueue = {};
+                ttsFetchQueue = [];
+                ttsRetryCount = {};
+                knownCacheKeys.clear();
+                knownMissingKeys.clear();
+                
+                if (result.success) {
+                    // 获取缓存统计
+                    const statsResp = await fetch('/api/tts/cache/stats');
+                    const stats = await statsResp.json();
+                    updateTTSStatus('缓存已清除');
+                    console.log('[TTS] 缓存已清除，路径:', stats.path);
+                } else {
+                    updateTTSStatus('清除缓存失败');
+                    console.log('[TTS] 清除缓存失败:', result.message);
+                }
+                
+            } catch (e) {
+                console.error('[TTS] 清除缓存失败:', e);
+                updateTTSStatus('清除缓存失败: ' + e.message);
+            }
+        }
+        
+        // 暴露给全局
+        window.clearTTSCache = clearTTSCache;
+
+        // 检查 URL 参数，是否需要自动播放
+        function checkAutoPlay() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('autoplay') === '1') {
+                // 移除 URL 参数
+                window.history.replaceState({}, '', window.location.pathname);
+                // 延迟启动播放
+                setTimeout(() => {
+                    toggleTTSPanel();
+                    setTimeout(() => ttsPlay(), 500);
+                }, 1000);
+            }
+        }
+        
+        // 页面加载后检查自动播放
+        checkAutoPlay();
+
+        // TTS 高亮样式和段落悬浮工具栏样式
+        const style = document.createElement('style');
+        style.textContent = `
+            .tts-highlight { background: rgba(52, 152, 219, 0.2); border-radius: 4px; }
+            .paragraph-selected { 
+                background: rgba(255, 235, 59, 0.25); 
+                border-radius: 4px; 
+                outline: 2px solid rgba(255, 193, 7, 0.4);
+            }
+            
+            /* 段落悬浮工具栏 */
+            .paragraph-toolbar {
+                position: fixed;
+                bottom: 100px;
+                right: 20px;
+                background: var(--toolbar-bg, #fff);
+                border: 1px solid var(--border-color, #ddd);
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                padding: 10px;
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .paragraph-toolbar button {
+                padding: 8px 12px;
+                border: none;
+                border-radius: 8px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                cursor: pointer;
+                font-size: 0.85em;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+            .paragraph-toolbar button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+            .paragraph-toolbar .para-info {
+                font-size: 0.75em;
+                color: var(--muted-color, #888);
+                text-align: center;
+                padding: 4px 0;
+                border-bottom: 1px solid var(--border-color, #eee);
+                margin-bottom: 4px;
+            }
+            
+        /* 仿真翻页效果 */
+        /* 仿真翻页效果（透视+阴影） */
+        .page-turn-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9998;
+            overflow: hidden;
+            background: transparent;
+        }
+        .page-turn-sheet {
+            position: absolute;
+            width: 70%;
+            height: 70%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.85), rgba(235,235,235,0.9));
+            box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+            opacity: 0;
+            transform-origin: 0% 100%;
+            border-radius: 8px;
+            background-image:
+              radial-gradient(40% 40% at 0% 100%, rgba(0,0,0,0.18), transparent 60%),
+              linear-gradient(135deg, rgba(255,255,255,0.9), rgba(245,245,245,0.9));
+        }
+        .page-turn-left .page-turn-sheet {
+            left: 0;
+            bottom: 0;
+            animation: pageTurnLeft 0.55s ease-out forwards;
+        }
+        .page-turn-right .page-turn-sheet {
+            right: 0;
+            bottom: 0;
+            transform-origin: 100% 100%;
+            animation: pageTurnRight 0.55s ease-out forwards;
+        }
+        @keyframes pageTurnLeft {
+            0%   { transform: rotate(-8deg) skewY(-6deg) translate(-8%, 18%) scale(1) rotateX(0deg); opacity: 0.95; }
+            30%  { transform: rotate(-22deg) skewY(-12deg) translate(-22%, 5%) scale(0.98) rotateX(6deg); opacity: 0.8; }
+            70%  { transform: rotate(-48deg) skewY(-16deg) translate(-60%, -18%) scale(0.94) rotateX(10deg); opacity: 0.35; }
+            100% { transform: rotate(-70deg) skewY(-18deg) translate(-90%, -36%) scale(0.9) rotateX(14deg); opacity: 0; }
+        }
+        @keyframes pageTurnRight {
+            0%   { transform: rotate(8deg) skewY(6deg) translate(8%, 18%) scale(1) rotateX(0deg); opacity: 0.95; }
+            30%  { transform: rotate(22deg) skewY(12deg) translate(22%, 5%) scale(0.98) rotateX(6deg); opacity: 0.8; }
+            70%  { transform: rotate(48deg) skewY(16deg) translate(60%, -18%) scale(0.94) rotateX(10deg); opacity: 0.35; }
+            100% { transform: rotate(70deg) skewY(18deg) translate(90%, -36%) scale(0.9) rotateX(14deg); opacity: 0; }
+        }
+            
+            /* 可爱主题的按钮样式 */
+            .theme-cute .paragraph-toolbar button {
+                background: linear-gradient(135deg, #ff9a9e, #fecfef);
+            }
+            .theme-cute .paragraph-toolbar button:hover {
+                box-shadow: 0 4px 12px rgba(255, 154, 158, 0.4);
+            }
+            .theme-fresh .paragraph-toolbar button {
+                background: linear-gradient(135deg, #a8edea, #fed6e3);
+            }
+            .theme-lavender .paragraph-toolbar button {
+                background: linear-gradient(135deg, #a18cd1, #fbc2eb);
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // 段落工具栏相关
+        let selectedParagraphIndex = -1;
+        
+        // 创建段落悬浮工具栏（默认隐藏）
+        const paragraphToolbar = document.createElement('div');
+        paragraphToolbar.className = 'paragraph-toolbar';
+        paragraphToolbar.id = 'paragraph-toolbar';
+        paragraphToolbar.style.display = 'none';
+        paragraphToolbar.style.right = '100px';   // 避开悬浮按钮
+        paragraphToolbar.style.bottom = '140px';  // 提升一点避免遮挡
+        paragraphToolbar.style.zIndex = '10002';  // 高于悬浮按钮
+        paragraphToolbar.innerHTML = `
+            <div class="para-info" id="para-info">未选择段落</div>
+            <button onclick="startReadFromHere()" title="从这里开始朗读">▶️ 从这里朗读</button>
+            <button onclick="saveProgressToHere()" title="保存进度到这里">💾 保存进度</button>
+            <button onclick="copyParagraphText()" title="复制段落文本">📋 复制文本</button>
+            <button onclick="selectPrevParagraph()" title="选择上一段">⬆️ 上一段</button>
+            <button onclick="selectNextParagraph()" title="选择下一段">⬇️ 下一段</button>
+            <button onclick="hideParagraphToolbar()" title="关闭">✕ 关闭</button>
+        `;
+        document.body.appendChild(paragraphToolbar);
+
+        // 创建一个浮动按钮来显式唤起段落工具栏
+        const paragraphFab = document.createElement('button');
+        paragraphFab.id = 'paragraph-fab';
+        paragraphFab.textContent = '📑 段落工具';
+        paragraphFab.style.position = 'fixed';
+        paragraphFab.style.bottom = '60px';
+        paragraphFab.style.right = '20px';
+        paragraphFab.style.zIndex = '10001';
+        paragraphFab.style.padding = '10px 14px';
+        paragraphFab.style.borderRadius = '999px';
+        paragraphFab.style.border = 'none';
+        paragraphFab.style.cursor = 'pointer';
+        paragraphFab.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+        paragraphFab.style.color = '#fff';
+        paragraphFab.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+        paragraphFab.onclick = () => {
+            // 如果尚未选中段落，则选中第一个段落
+            if (selectedParagraphIndex < 0 && ttsParagraphs.length > 0) {
+                selectedParagraphIndex = 0;
+                window.selectedParagraphIndex = 0;
+                updateSelectionVisuals(0, 'auto');
+            }
+            showParagraphToolbar();
+        };
+        document.body.appendChild(paragraphFab);
+        
+        // 创建翻页效果层（纯 CSS）
+        const pageTurnOverlay = document.createElement('div');
+        pageTurnOverlay.className = 'page-turn-overlay';
+        pageTurnOverlay.id = 'page-turn-overlay';
+        document.body.appendChild(pageTurnOverlay);
+        
+        // 显示/隐藏段落工具栏
+        function showParagraphToolbar() { UI.showToolbar(); }
+        
+        function hideParagraphToolbar() { UI.hideToolbar(); }
+        
+        function updateParagraphInfo() {
+            const infoEl = document.getElementById('para-info');
+            if (selectedParagraphIndex >= 0 && ttsParagraphs[selectedParagraphIndex]) {
+                const text = ttsParagraphs[selectedParagraphIndex].text;
+                infoEl.textContent = `第 ${selectedParagraphIndex + 1}/${ttsParagraphs.length} 段`;
+            } else {
+                infoEl.textContent = '未选择段落';
+            }
+        }
+        
+        // 选择上一段
+        function selectPrevParagraph() { UI.selectPrevParagraph(); }
+        
+        // 选择下一段
+        function selectNextParagraph() { UI.selectNextParagraph(); }
+        
+        // 初始化段落点击选择（支持 TTS_PARAGRAPH_SELECTORS 中的元素）
+        function initParagraphSelection() {
+            const SELECTORS = window.TTS_PARAGRAPH_SELECTORS || 'p, div, h1, h2, h3, h4, h5, h6, li, blockquote, td, th';
+            if (window.UI && typeof UI.initParagraphSelection === 'function') {
+                try { UI.initParagraphSelection(SELECTORS); return; } catch {}
+            }
+            const contentArea = document.querySelector('.content-area') || document.querySelector('.book-content') || document.querySelector('.content') || document.body;
+            if (!contentArea) return;
+            const paragraphSelectors = SELECTORS.split(',').map(s => s.trim()).filter(Boolean);
+            const matchesParagraph = (el) => paragraphSelectors.some(sel => el.matches && el.matches(sel));
+            contentArea.addEventListener('click', function(e) {
+                let target = e.target;
+                while (target && target !== contentArea) {
+                    if (matchesParagraph(target)) {
+                        if (ttsParagraphs.length === 0) { try { initTTSParagraphs(false); } catch {} }
+                        const paraIndex = ttsParagraphs.findIndex(p => p.node === target);
+                        if (paraIndex >= 0) {
+                            selectedParagraphIndex = paraIndex;
+                            window.selectedParagraphIndex = paraIndex;
+                            updateSelectionVisuals(paraIndex, 'auto');
+                            showParagraphToolbar();
+                        }
+                        return;
+                    }
+                    target = target.parentElement;
+                }
+            });
+        }
+        
+        // 仿真翻页效果：动态生成翻页纸张，提高真实感（纯 CSS 备选）
+        function showPageTurnEffect(direction) {
+            const overlay = document.getElementById('page-turn-overlay');
+            if (!overlay) return;
+            overlay.innerHTML = '';
+            overlay.className = 'page-turn-overlay ' + (direction === 'left' ? 'page-turn-left' : 'page-turn-right');
+            
+            const sheet = document.createElement('div');
+            sheet.className = 'page-turn-sheet';
+            overlay.appendChild(sheet);
+            
+            // 动画结束后清理
+            setTimeout(() => {
+                overlay.className = 'page-turn-overlay';
+                overlay.innerHTML = '';
+            }, 650);
+        }
+        
+        // 翻页导航函数
+        function goToPrevChapter() {
+            const prevBtn = document.querySelector('[data-prev-url]');
+            if (!prevBtn) return;
+            const url = prevBtn.dataset.prevUrl;
+            
+            showPageTurnEffect('right');
+            setTimeout(() => {
+                window.location.href = url;
+            }, 200);
+        }
+        
+        function goToNextChapter() {
+            const nextBtn = document.querySelector('[data-next-url]');
+            if (!nextBtn) return;
+            const url = nextBtn.dataset.nextUrl;
+            
+            showPageTurnEffect('left');
+            setTimeout(() => {
+                window.location.href = url;
+            }, 200);
+        }
+        
+        // 暴露到全局
+        window.goToPrevChapter = goToPrevChapter;
+        window.goToNextChapter = goToNextChapter;
+        
+        // 从选中段落开始朗读
+        async function startReadFromHere() { try { UI.startHere(); } catch {} }
+        
+        // 保存进度到选中段落
+        function saveProgressToHere() { try { UI.saveProgressHere(); } catch {} }
+        
+        // 复制段落文本
+        function copyParagraphText() { try { UI.copySelectedText(); } catch {} }
+        
+        // 初始化段落选择功能
+        initParagraphSelection();
+        
+        // 点击空白处关闭工具栏
+        (function(){
+            const SELECTORS = window.TTS_PARAGRAPH_SELECTORS || 'p, div, h1, h2, h3, h4, h5, h6, li, blockquote, td, th';
+            if (window.UI && typeof UI.initBlankCloseListener === 'function') {
+                try { UI.initBlankCloseListener(SELECTORS); return; } catch {}
+            }
+            document.addEventListener('click', function(e) {
+                const toolbar = document.getElementById('paragraph-toolbar');
+                const fab = document.getElementById('paragraph-fab');
+                if (!toolbar || toolbar.style.display === 'none') return;
+                if (toolbar.contains(e.target) || (fab && fab.contains(e.target))) return;
+                const paragraphSelectors = SELECTORS.split(',').map(s => s.trim()).filter(Boolean);
+                const matchesParagraph = (el) => paragraphSelectors.some(sel => el.matches && el.matches(sel));
+                let target = e.target;
+                while (target && target !== document.body) {
+                    if (matchesParagraph(target)) return;
+                    target = target.parentElement;
+                }
+                hideParagraphToolbar();
+            });
+        })();
+        
+        // 暴露段落工具栏函数到全局作用域
+        window.startReadFromHere = startReadFromHere;
+        window.saveProgressToHere = saveProgressToHere;
+        window.copyParagraphText = copyParagraphText;
+        window.selectPrevParagraph = selectPrevParagraph;
+        window.selectNextParagraph = selectNextParagraph;
+        window.showParagraphToolbar = showParagraphToolbar;
+        window.hideParagraphToolbar = hideParagraphToolbar;
+
+        // 确保 Settings.load 与语言选项填充在外部模块加载后执行
+        window.addEventListener('load', function(){
+            try { if (window.Settings && typeof Settings.load === 'function') Settings.load(); } catch {}
+            try { if (typeof updateGPTSoVITSLangOptions === 'function') updateGPTSoVITSLangOptions(); } catch {}
+        });
     </script>
+    <script src="/static/js/tts-engine.js"></script>
+    <script src="/static/js/settings.js"></script>
+    <script src="/static/js/ui.js"></script>
 </body>
 </html>
