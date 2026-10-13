@@ -1,12 +1,12 @@
 """
-Parses an EPUB file into a structured object that can be used to serve the book via a web interface.
+将 EPUB 文件解析为结构化对象，用于通过 Web 界面提供阅读服务。
 """
 
 import os
-import pickle
+import json
 import shutil
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any
+from dataclasses import dataclass, field, asdict
+from typing import List, Dict, Optional
 from datetime import datetime
 from urllib.parse import unquote
 
@@ -14,35 +14,35 @@ import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup, Comment
 
-# --- Data structures ---
+# --- 数据结构 ---
 
 @dataclass
 class ChapterContent:
     """
-    Represents a physical file in the EPUB (Spine Item).
-    A single file might contain multiple logical chapters (TOC entries).
+    表示 EPUB 中的物理文件（Spine 项）。
+    单个文件可能包含多个逻辑章节（目录条目）。
     """
-    id: str           # Internal ID (e.g., 'item_1')
-    href: str         # Filename (e.g., 'part01.html')
-    title: str        # Best guess title from file
-    content: str      # Cleaned HTML with rewritten image paths
-    text: str         # Plain text for search/LLM context
-    order: int        # Linear reading order
+    id: str           # 内部 ID（如 'item_1'）
+    href: str         # 文件名（如 'part01.html'）
+    title: str        # 从文件推测的标题
+    content: str      # 清理后的 HTML（图片路径已重写）
+    text: str         # 纯文本，用于搜索/LLM
+    order: int        # 线性阅读顺序
 
 
 @dataclass
 class TOCEntry:
-    """Represents a logical entry in the navigation sidebar."""
+    """表示导航侧边栏中的逻辑条目。"""
     title: str
-    href: str         # original href (e.g., 'part01.html#chapter1')
-    file_href: str    # just the filename (e.g., 'part01.html')
-    anchor: str       # just the anchor (e.g., 'chapter1'), empty if none
+    href: str         # 原始 href（如 'part01.html#chapter1'）
+    file_href: str    # 仅文件名（如 'part01.html'）
+    anchor: str       # 仅锚点（如 'chapter1'），无则为空
     children: List['TOCEntry'] = field(default_factory=list)
 
 
 @dataclass
 class BookMetadata:
-    """Metadata"""
+    """书籍元数据"""
     title: str
     language: str
     authors: List[str] = field(default_factory=list)
@@ -55,31 +55,59 @@ class BookMetadata:
 
 @dataclass
 class Book:
-    """The Master Object to be pickled."""
+    """主对象，用于序列化存储。"""
     metadata: BookMetadata
-    spine: List[ChapterContent]  # The actual content (linear files)
-    toc: List[TOCEntry]          # The navigation tree
-    images: Dict[str, str]       # Map: original_path -> local_path
+    spine: List[ChapterContent]  # 实际内容（线性文件列表）
+    toc: List[TOCEntry]          # 导航树
+    images: Dict[str, str]       # 映射：原始路径 -> 本地路径
 
-    # Meta info
+    # 元信息
     source_file: str
     processed_at: str
     version: str = "3.0"
 
+    def to_dict(self) -> dict:
+        """转换为可 JSON 序列化的字典。"""
+        return asdict(self)
 
-# --- Utilities ---
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Book':
+        """从字典重建 Book 对象。"""
+        return cls(
+            metadata=BookMetadata(**data.get('metadata', {})),
+            spine=[ChapterContent(**ch) for ch in data.get('spine', [])],
+            toc=[cls._toc_from_dict(t) for t in data.get('toc', [])],
+            images=data.get('images', {}),
+            source_file=data.get('source_file', ''),
+            processed_at=data.get('processed_at', ''),
+            version=data.get('version', '3.0')
+        )
+
+    @staticmethod
+    def _toc_from_dict(data: dict) -> TOCEntry:
+        """递归重建 TOCEntry。"""
+        return TOCEntry(
+            title=data['title'],
+            href=data['href'],
+            file_href=data['file_href'],
+            anchor=data['anchor'],
+            children=[Book._toc_from_dict(c) for c in data.get('children', [])]
+        )
+
+
+# --- 工具函数 ---
 
 def clean_html_content(soup: BeautifulSoup) -> BeautifulSoup:
-
-    # Remove dangerous/useless tags
+    """清理 HTML 内容，移除危险和无用的标签。"""
+    # 移除危险/无用标签
     for tag in soup(['script', 'style', 'iframe', 'video', 'nav', 'form', 'button']):
         tag.decompose()
 
-    # Remove HTML comments
+    # 移除 HTML 注释
     for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
         comment.extract()
 
-    # Remove input tags
+    # 移除 input 标签
     for tag in soup.find_all('input'):
         tag.decompose()
 
@@ -87,20 +115,18 @@ def clean_html_content(soup: BeautifulSoup) -> BeautifulSoup:
 
 
 def extract_plain_text(soup: BeautifulSoup) -> str:
-    """Extract clean text for LLM/Search usage."""
+    """提取纯文本，用于 LLM/搜索。"""
     text = soup.get_text(separator=' ')
-    # Collapse whitespace
+    # 合并空白字符
     return ' '.join(text.split())
 
 
 def parse_toc_recursive(toc_list, depth=0) -> List[TOCEntry]:
-    """
-    Recursively parses the TOC structure from ebooklib.
-    """
+    """递归解析 ebooklib 的目录结构。"""
     result = []
 
     for item in toc_list:
-        # ebooklib TOC items are either `Link` objects or tuples (Section, [Children])
+        # ebooklib 目录项可能是 Link 对象或元组 (Section, [Children])
         if isinstance(item, tuple):
             section, children = item
             entry = TOCEntry(
@@ -119,7 +145,7 @@ def parse_toc_recursive(toc_list, depth=0) -> List[TOCEntry]:
                 anchor=item.href.split('#')[1] if '#' in item.href else ""
             )
             result.append(entry)
-        # Note: ebooklib sometimes returns direct Section objects without children
+        # 注意：ebooklib 有时会返回不带子项的 Section 对象
         elif isinstance(item, epub.Section):
              entry = TOCEntry(
                 title=item.title,
@@ -133,23 +159,19 @@ def parse_toc_recursive(toc_list, depth=0) -> List[TOCEntry]:
 
 
 def get_fallback_toc(book_obj) -> List[TOCEntry]:
-    """
-    If TOC is missing, build a flat one from the Spine.
-    """
+    """如果目录缺失，从 Spine 构建简单目录。"""
     toc = []
     for item in book_obj.get_items():
         if item.get_type() == ebooklib.ITEM_DOCUMENT:
             name = item.get_name()
-            # Try to guess a title from the content or ID
+            # 尝试从文件名推测标题
             title = item.get_name().replace('.html', '').replace('.xhtml', '').replace('_', ' ').title()
             toc.append(TOCEntry(title=title, href=name, file_href=name, anchor=""))
     return toc
 
 
 def extract_metadata_robust(book_obj) -> BookMetadata:
-    """
-    Extracts metadata handling both single and list values.
-    """
+    """健壮地提取元数据，同时处理单值和列表值。"""
     def get_list(key):
         data = book_obj.get_metadata('DC', key)
         return [x[0] for x in data] if data else []
@@ -159,7 +181,7 @@ def extract_metadata_robust(book_obj) -> BookMetadata:
         return data[0][0] if data else None
 
     return BookMetadata(
-        title=get_one('title') or "Untitled",
+        title=get_one('title') or "未命名",
         language=get_one('language') or "en",
         authors=get_list('creator'),
         description=get_one('description'),
@@ -170,57 +192,100 @@ def extract_metadata_robust(book_obj) -> BookMetadata:
     )
 
 
-# --- Main Conversion Logic ---
+# --- 主转换逻辑 ---
+
+def _swap_output_dir(staging: str, output_dir: str) -> None:
+    """用临时目录替换正式输出目录。失败时把旧目录改回去。"""
+    backup = output_dir + ".__old"
+    if os.path.isdir(backup):
+        shutil.rmtree(backup)
+    replaced = False
+    if os.path.exists(output_dir):
+        os.rename(output_dir, backup)
+        replaced = True
+    try:
+        os.rename(staging, output_dir)
+    except Exception:
+        if replaced and os.path.isdir(backup) and not os.path.exists(output_dir):
+            os.rename(backup, output_dir)
+        raise
+    if os.path.isdir(backup):
+        shutil.rmtree(backup, ignore_errors=True)
+
+
+def _unique_image_filename(original_fname: str, seq: int, used: set) -> str:
+    safe = "".join(c for c in original_fname if c.isalpha() or c.isdigit() or c in "._-").strip(" .")
+    stem, ext = os.path.splitext(safe)
+    if not stem or stem in {".", ".."}:
+        stem = f"image_{seq}"
+    candidate = stem + ext
+    n = 2
+    while not candidate or candidate.lower() in used:
+        candidate = f"{stem}_{n}{ext}"
+        n += 1
+    used.add(candidate.lower())
+    return candidate
+
 
 def process_epub(epub_path: str, output_dir: str) -> Book:
-
-    # 1. Load Book
-    print(f"Loading {epub_path}...")
+    """处理 EPUB 文件，返回解析后的 Book 对象。"""
+    # 1. 加载书籍
+    print(f"正在加载 {epub_path}...")
     book = epub.read_epub(epub_path)
 
-    # 2. Extract Metadata
+    # 2. 提取元数据
     metadata = extract_metadata_robust(book)
 
-    # 3. Prepare Output Directories
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
-    images_dir = os.path.join(output_dir, 'images')
+    # 3. 先写入临时目录，成功后再替换已有成品
+    staging = output_dir + ".__new"
+    if os.path.exists(staging):
+        shutil.rmtree(staging)
+    images_dir = os.path.join(staging, 'images')
     os.makedirs(images_dir, exist_ok=True)
 
-    # 4. Extract Images & Build Map
-    print("Extracting images...")
-    image_map = {} # Key: internal_path, Value: local_relative_path
+    # 4. 提取图片并构建映射
+    print("正在提取图片...")
+    image_map = {}  # 键：内部路径，值：本地相对路径
+    basename_map = {}
+    used_names = set()
 
-    for item in book.get_items():
+    for seq, item in enumerate(book.get_items()):
         if item.get_type() == ebooklib.ITEM_IMAGE:
-            # Normalize filename
+            # 规范化文件名
             original_fname = os.path.basename(item.get_name())
-            # Sanitize filename for OS
-            safe_fname = "".join([c for c in original_fname if c.isalpha() or c.isdigit() or c in '._-']).strip()
+            safe_fname = _unique_image_filename(original_fname, seq, used_names)
 
-            # Save to disk
+            # 保存到磁盘
             local_path = os.path.join(images_dir, safe_fname)
             with open(local_path, 'wb') as f:
                 f.write(item.get_content())
 
-            # Map keys: We try both the full internal path and just the basename
-            # to be robust against messy HTML src attributes
+            # 映射键使用完整内部路径；仅文件名只在全书唯一时保留
             rel_path = f"images/{safe_fname}"
-            image_map[item.get_name()] = rel_path
-            image_map[original_fname] = rel_path
+            internal = item.get_name().replace("\\", "/")
+            image_map[internal] = rel_path
+            image_map[unquote(internal)] = rel_path
+            if original_fname not in basename_map:
+                basename_map[original_fname] = rel_path
+            elif basename_map[original_fname] != rel_path:
+                basename_map.pop(original_fname, None)
+                basename_map[original_fname] = None
+    for name, rel_path in basename_map.items():
+        if rel_path:
+            image_map.setdefault(name, rel_path)
 
-    # 5. Process TOC
-    print("Parsing Table of Contents...")
+    # 5. 处理目录
+    print("正在解析目录...")
     toc_structure = parse_toc_recursive(book.toc)
     if not toc_structure:
-        print("Warning: Empty TOC, building fallback from Spine...")
+        print("警告：目录为空，正在从 Spine 构建备用目录...")
         toc_structure = get_fallback_toc(book)
 
-    # 6. Process Content (Spine-based to preserve HTML validity)
-    print("Processing chapters...")
+    # 6. 处理内容（基于 Spine 以保持 HTML 有效性）
+    print("正在处理章节...")
     spine_chapters = []
 
-    # We iterate over the spine (linear reading order)
+    # 按 spine（线性阅读顺序）遍历
     for i, spine_item in enumerate(book.spine):
         item_id, linear = spine_item
         item = book.get_item_with_id(item_id)
@@ -229,48 +294,48 @@ def process_epub(epub_path: str, output_dir: str) -> Book:
             continue
 
         if item.get_type() == ebooklib.ITEM_DOCUMENT:
-            # Raw content
+            # 原始内容
             raw_content = item.get_content().decode('utf-8', errors='ignore')
             soup = BeautifulSoup(raw_content, 'html.parser')
 
-            # A. Fix Images
+            # A. 修复图片路径
             for img in soup.find_all('img'):
                 src = img.get('src', '')
                 if not src: continue
 
-                # Decode URL (part01/image%201.jpg -> part01/image 1.jpg)
-                src_decoded = unquote(src)
+                # 解码 URL（part01/image%201.jpg -> part01/image 1.jpg）
+                src_decoded = unquote(src).replace("\\", "/")
                 filename = os.path.basename(src_decoded)
 
-                # Try to find in map
+                # 尝试在映射中查找
                 if src_decoded in image_map:
                     img['src'] = image_map[src_decoded]
                 elif filename in image_map:
                     img['src'] = image_map[filename]
 
-            # B. Clean HTML
+            # B. 清理 HTML
             soup = clean_html_content(soup)
 
-            # C. Extract Body Content only
+            # C. 仅提取 body 内容
             body = soup.find('body')
             if body:
-                # Extract inner HTML of body
+                # 提取 body 的内部 HTML
                 final_html = "".join([str(x) for x in body.contents])
             else:
                 final_html = str(soup)
 
-            # D. Create Object
+            # D. 创建章节对象
             chapter = ChapterContent(
                 id=item_id,
-                href=item.get_name(), # Important: This links TOC to Content
-                title=f"Section {i+1}", # Fallback, real titles come from TOC
+                href=item.get_name(),  # 重要：用于关联目录和内容
+                title=f"第 {i+1} 节",  # 备用标题，真实标题来自目录
                 content=final_html,
                 text=extract_plain_text(soup),
                 order=i
             )
             spine_chapters.append(chapter)
 
-    # 7. Final Assembly
+    # 7. 最终组装
     final_book = Book(
         metadata=metadata,
         spine=spine_chapters,
@@ -280,34 +345,56 @@ def process_epub(epub_path: str, output_dir: str) -> Book:
         processed_at=datetime.now().isoformat()
     )
 
+    try:
+        save_to_json(final_book, staging)
+        _swap_output_dir(staging, output_dir)
+    except Exception:
+        if os.path.isdir(staging):
+            shutil.rmtree(staging, ignore_errors=True)
+        raise
     return final_book
 
 
-def save_to_pickle(book: Book, output_dir: str):
-    p_path = os.path.join(output_dir, 'book.pkl')
-    with open(p_path, 'wb') as f:
-        pickle.dump(book, f)
-    print(f"Saved structured data to {p_path}")
+def save_to_json(book: Book, output_dir: str):
+    """将书籍数据保存为 JSON（比 pickle 更安全）。"""
+    json_path = os.path.join(output_dir, 'book.json')
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(book.to_dict(), f, ensure_ascii=False)
+    print(f"已保存结构化数据到 {json_path}")
+
+    # 同时保存轻量级元数据索引，用于快速列出书库
+    index_path = os.path.join(output_dir, 'index.json')
+    index_data = {
+        'title': book.metadata.title,
+        'authors': book.metadata.authors,
+        'chapters': len(book.spine),
+        'processed_at': book.processed_at
+    }
+    with open(index_path, 'w', encoding='utf-8') as f:
+        json.dump(index_data, f, ensure_ascii=False)
+    print(f"已保存索引到 {index_path}")
 
 
-# --- CLI ---
+# --- 命令行入口 ---
 
 if __name__ == "__main__":
 
     import sys
     if len(sys.argv) < 2:
-        print("Usage: python reader3.py <file.epub>")
+        print("用法: python reader3.py <文件.epub>")
         sys.exit(1)
 
     epub_file = sys.argv[1]
-    assert os.path.exists(epub_file), "File not found."
+    if not os.path.exists(epub_file):
+        print("文件不存在。")
+        sys.exit(1)
     out_dir = os.path.splitext(epub_file)[0] + "_data"
 
     book_obj = process_epub(epub_file, out_dir)
-    save_to_pickle(book_obj, out_dir)
-    print("\n--- Summary ---")
-    print(f"Title: {book_obj.metadata.title}")
-    print(f"Authors: {', '.join(book_obj.metadata.authors)}")
-    print(f"Physical Files (Spine): {len(book_obj.spine)}")
-    print(f"TOC Root Items: {len(book_obj.toc)}")
-    print(f"Images extracted: {len(book_obj.images)}")
+    save_to_json(book_obj, out_dir)
+    print("\n--- 处理摘要 ---")
+    print(f"书名: {book_obj.metadata.title}")
+    print(f"作者: {', '.join(book_obj.metadata.authors)}")
+    print(f"物理文件数 (Spine): {len(book_obj.spine)}")
+    print(f"目录根条目数: {len(book_obj.toc)}")
+    print(f"已提取图片数: {len(book_obj.images)}")
