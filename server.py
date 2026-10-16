@@ -15,6 +15,8 @@ import hashlib
 import time
 import base64
 import ctypes
+import threading
+import mimetypes
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from collections import OrderedDict
@@ -34,7 +36,7 @@ from book_index_utils import clean_path
 from book_index_utils import load_books_index as shared_load_books_index
 from book_index_utils import norm_path as shared_norm_path
 from book_index_utils import save_books_index as shared_save_books_index
-from reader3 import Book, process_epub, save_to_json
+from reader3 import Book, _lookup_image, chapter_title_from_toc, process_epub, save_to_json
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -214,6 +216,35 @@ except Exception:
     IMPORT_JOBS_MAX = 500
 
 _last_reading_progress_save = 0.0
+_progress_dirty = False
+_progress_timer: Optional[threading.Timer] = None
+_progress_lock = threading.Lock()
+
+
+def flush_reading_progress() -> None:
+    """把尚未落盘的朗读进度写进配置。重复调用是安全的。"""
+    global _last_reading_progress_save, _progress_dirty, _progress_timer
+    with _progress_lock:
+        timer = _progress_timer
+        _progress_timer = None
+        if timer is not None:
+            timer.cancel()
+        if not _progress_dirty:
+            return
+        save_config(CONFIG)
+        _last_reading_progress_save = time.time()
+        _progress_dirty = False
+
+
+def _schedule_progress_flush() -> None:
+    global _progress_timer
+    if _progress_timer is not None:
+        return
+    delay = READING_PROGRESS_SAVE_INTERVAL if READING_PROGRESS_SAVE_INTERVAL > 0 else 0.1
+    timer = threading.Timer(max(delay, 0.1), flush_reading_progress)
+    timer.daemon = True
+    _progress_timer = timer
+    timer.start()
 
 # 书籍索引文件（由 start.py 维护）
 BOOKS_INDEX_FILE = "books_index.json"
@@ -259,22 +290,23 @@ def get_reading_progress(book_id: str, directory: Optional[str] = None) -> Optio
 
 
 def set_reading_progress(book_id: str, chapter_index: int, paragraph_index: int, directory: Optional[str] = None) -> None:
-    global _last_reading_progress_save
+    global _last_reading_progress_save, _progress_dirty
     if not book_id:
         return
-    CONFIG.setdefault("reading_progress", {})[_progress_storage_key(book_id, directory)] = {
-        "chapter_index": int(chapter_index),
-        "paragraph_index": int(paragraph_index),
-    }
-    now = time.time()
-    interval = READING_PROGRESS_SAVE_INTERVAL
-    if interval <= 0:
-        save_config(CONFIG)
-        _last_reading_progress_save = now
-        return
-    if _last_reading_progress_save <= 0 or now - _last_reading_progress_save >= interval:
-        save_config(CONFIG)
-        _last_reading_progress_save = now
+    with _progress_lock:
+        CONFIG.setdefault("reading_progress", {})[_progress_storage_key(book_id, directory)] = {
+            "chapter_index": int(chapter_index),
+            "paragraph_index": int(paragraph_index),
+        }
+        now = time.time()
+        interval = READING_PROGRESS_SAVE_INTERVAL
+        if interval <= 0 or _last_reading_progress_save <= 0 or now - _last_reading_progress_save >= interval:
+            save_config(CONFIG)
+            _last_reading_progress_save = now
+            _progress_dirty = False
+            return
+        _progress_dirty = True
+        _schedule_progress_flush()
 
 def _normp(p: str) -> str:
     return shared_norm_path(p)
@@ -331,6 +363,64 @@ def _process_epub_to_out_dir(epub_path: str, out_dir: str) -> Dict[str, Any]:
     }
 
 
+def _import_source_names(input_path: str) -> set:
+    """同一文件可能以原名或 .converted.epub 被记录。"""
+    base = os.path.basename(input_path or "")
+    names = {base}
+    root, ext = os.path.splitext(base)
+    if ext.lower() != ".epub":
+        names.add(root + ".converted.epub")
+    if base.lower().endswith(".converted.epub"):
+        names.add(base[: -len(".converted.epub")])
+    return {name.lower() for name in names if name}
+
+
+def _read_book_source_file(book_dir: str) -> str:
+    index_path = os.path.join(book_dir, "index.json")
+    try:
+        with open(index_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        src = data.get("source_file") or ""
+        if src:
+            return os.path.basename(src)
+    except Exception:
+        pass
+    book_path = os.path.join(book_dir, "book.json")
+    try:
+        with open(book_path, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            f.seek(max(0, size - 16384))
+            tail = f.read().decode("utf-8", errors="ignore")
+        match = re.search(r'"source_file"\s*:\s*"((?:\\.|[^"\\])*)"', tail)
+        if match:
+            return os.path.basename(json.loads('"' + match.group(1) + '"'))
+    except Exception:
+        pass
+    return ""
+
+
+def _find_imported_dir(base_dir: str, input_path: str) -> Optional[str]:
+    """按源文件名查找已经导入的书，避免改名后再次导入变成第二本。"""
+    names = _import_source_names(input_path)
+    if not names or not os.path.isdir(base_dir):
+        return None
+    try:
+        children = os.listdir(base_dir)
+    except Exception:
+        return None
+    for item in children:
+        if not item.endswith("_data"):
+            continue
+        full = os.path.join(base_dir, item)
+        if not os.path.isdir(full) or not os.path.exists(os.path.join(full, "book.json")):
+            continue
+        src = os.path.basename(_read_book_source_file(full)).lower()
+        if src and src in names:
+            return full
+    return None
+
+
 def _job_worker(input_path: str, base_dir: str, sanitize: bool = False) -> Dict[str, Any]:
     ext = os.path.splitext(input_path)[1].lower()
     epub_path = input_path
@@ -361,6 +451,18 @@ def _job_worker(input_path: str, base_dir: str, sanitize: bool = False) -> Dict[
         os.makedirs(base_dir, exist_ok=True)
     except Exception:
         pass
+    existing = _find_imported_dir(base_dir, input_path)
+    if not existing and epub_path != input_path:
+        existing = _find_imported_dir(base_dir, epub_path)
+    if existing:
+        return {
+            "status": "skipped",
+            "file": input_path,
+            "out_dir": existing,
+            "book_id": os.path.basename(existing),
+            "base_dir": os.path.dirname(existing),
+            "title": "",
+        }
     out_dir = os.path.join(base_dir, out_dir_base + "_data")
     if os.path.isdir(out_dir) and os.path.exists(os.path.join(out_dir, "book.json")):
         return {"status": "skipped", "file": input_path, "out_dir": out_dir}
@@ -368,6 +470,7 @@ def _job_worker(input_path: str, base_dir: str, sanitize: bool = False) -> Dict[
     for i in range(2):
         try:
             result = _process_epub_to_out_dir(epub_path, out_dir)
+            skipped_existing = False
             try:
                 book_obj = result.get("book")
                 title = ""
@@ -388,10 +491,20 @@ def _job_worker(input_path: str, base_dir: str, sanitize: bool = False) -> Dict[
                         result["title"] = title
                     except Exception:
                         pass
+                elif final_out_dir != out_dir and os.path.isdir(final_out_dir):
+                    existing_src = os.path.basename(_read_book_source_file(final_out_dir)).lower()
+                    new_names = _import_source_names(input_path) | _import_source_names(epub_path)
+                    if existing_src and existing_src in new_names:
+                        shutil.rmtree(out_dir, ignore_errors=True)
+                        result["out_dir"] = final_out_dir
+                        result["book_id"] = final_dir_name
+                        result["base_dir"] = base_dir
+                        result["title"] = title
+                        skipped_existing = True
             except Exception:
                 pass
             return {
-                "status": "done",
+                "status": "skipped" if skipped_existing else "done",
                 "file": input_path,
                 "out_dir": result["out_dir"],
                 "book_id": result["book_id"],
@@ -502,11 +615,23 @@ def _compact_import_jobs() -> None:
                 excess -= 1
 
 
+def _configured_book_directories() -> List[str]:
+    """配置里的书籍目录。Windows 上大小写不同的同一路径只保留第一次。"""
+    out = []
+    seen = set()
+    for item in CONFIG.get("book_directories", ["."]):
+        key = _normp(item)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(item)
+    return out
+
+
 def get_book_directories() -> List[str]:
     """获取所有书籍目录（包括从索引文件中提取的），进行路径规范化去重"""
-    base_dirs = list(CONFIG.get("book_directories", ["."]))
-    seen = set(_normp(d) for d in base_dirs)
-    dirs = list(base_dirs)
+    dirs = _configured_book_directories()
+    seen = set(_normp(d) for d in dirs)
     for book in load_books_index():
         book_dir = book.get("directory", "")
         if book_dir:
@@ -679,7 +804,7 @@ def _build_book_info(book_id: str, base_dir: str, index: dict) -> dict:
                 read = sum(len((ch.text or '')) for ch in bobj.spine[:ci])
                 curr = len((bobj.spine[ci].text or ''))
                 detail = {
-                    "chapter_title": bobj.spine[ci].title,
+                    "chapter_title": chapter_title_from_toc(bobj, ci),
                     "read_words": read,
                     "total_words": total,
                     "current_chapter_words": curr
@@ -724,7 +849,7 @@ def scan_all_books() -> List[dict]:
                     books.append(_build_book_info(book_id, book_dir, index))
 
     # 然后扫描配置的目录。目录暂时不可用时只跳过，不改配置。
-    for base_dir in list(CONFIG.get("book_directories", ["."])):
+    for base_dir in _configured_book_directories():
         if not os.path.exists(base_dir) or not os.path.isdir(base_dir):
             print(f"跳过不可用的书籍目录: {base_dir}")
             continue
@@ -845,7 +970,7 @@ async def library_view(request: Request):
         "request": request,
         "books": books,
         # 目录标签仅显示配置中的目录
-        "directories_config": CONFIG.get("book_directories", ["."])
+        "directories_config": _configured_book_directories()
     })
 
 
@@ -866,13 +991,36 @@ async def serve_image(book_id: str, image_name: str, book_dir: Optional[str] = Q
         os.path.abspath(os.path.join(root_dir, safe_image_name)),
     ]
 
+    IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".tif", ".tiff", ".ico", ".avif"}
+    suffix = os.path.splitext(safe_image_name)[1].lower()
     for img_path in candidates:
-        if img_path.startswith(images_dir + os.sep) or img_path.startswith(root_dir + os.sep):
-            if os.path.exists(img_path):
-                return FileResponse(img_path)
+        in_images = img_path.startswith(images_dir + os.sep)
+        in_root = img_path.startswith(root_dir + os.sep)
+        if not in_images and not (in_root and suffix in IMAGE_SUFFIXES):
+            continue
+        if os.path.isfile(img_path):
+            return FileResponse(img_path)
     raise HTTPException(status_code=404, detail="图片未找到")
 
- 
+
+LOCAL_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tif", ".tiff", ".ico", ".avif"}
+
+
+@app.get("/api/local-image")
+async def local_image(path: str = Query(..., description="本机图片路径")):
+    """给阅读页背景使用。只返回图片文件。"""
+    raw = clean_path(path)
+    if not raw:
+        raise HTTPException(status_code=400, detail="路径不能为空")
+    abs_path = os.path.abspath(raw)
+    suffix = os.path.splitext(abs_path)[1].lower()
+    if suffix not in LOCAL_IMAGE_SUFFIXES:
+        raise HTTPException(status_code=400, detail="只支持图片文件")
+    if not os.path.isfile(abs_path):
+        raise HTTPException(status_code=404, detail="图片不存在")
+    media_type = mimetypes.guess_type(abs_path)[0] or "application/octet-stream"
+    return FileResponse(abs_path, media_type=media_type)
+
 
 @app.get("/read/{book_id}")
 async def redirect_to_first_chapter(book_id: str, request: Request):
@@ -913,9 +1061,13 @@ async def read_chapter(
             def map_url(u: str) -> str:
                 if u.startswith(('http://', 'https://', 'data:')):
                     return u
-                if u.startswith(f"/read/{book_id}_data/"):
-                    return f"/read/{book_id}/images/{os.path.basename(u)}{dir_q}"
-                return f"/read/{book_id}/images/{os.path.basename(u)}{dir_q}"
+                clean = u.split('#', 1)[0].split('?', 1)[0]
+                if clean.startswith('/read/'):
+                    name = os.path.basename(clean)
+                else:
+                    mapped = _lookup_image(book.images or {}, current_chapter.href, clean)
+                    name = os.path.basename(mapped or clean)
+                return f"/read/{book_id}/images/{name}{dir_q}"
 
             def repl_src(m):
                 quote = m.group(2)
@@ -975,7 +1127,8 @@ async def read_chapter(
         "prev_idx": prev_idx,
         "next_idx": next_idx,
         "tts_config": tts_config,
-        "content_html": content_html
+        "content_html": content_html,
+        "chapter_title": chapter_title_from_toc(book, chapter_index),
     })
 
 
@@ -1243,6 +1396,7 @@ async def add_directory(request: Request):
     
     # 规范化路径
     path = os.path.abspath(path)
+    norm_new = _normp(path)
     
     if not os.path.exists(path):
         raise HTTPException(status_code=400, detail="路径不存在")
@@ -1251,7 +1405,7 @@ async def add_directory(request: Request):
     if not os.path.isdir(path):
         raise HTTPException(status_code=400, detail="请输入目录路径，不是文件路径")
     
-    if path not in CONFIG["book_directories"]:
+    if not any(_normp(item) == norm_new for item in CONFIG.get("book_directories", [])):
         CONFIG["book_directories"].append(path)
         save_config(CONFIG)
     
@@ -1507,10 +1661,11 @@ async def delete_books(request: Request):
                     if not (e.get("id") == safe_id and _normp(e.get("directory", "")) == target_dir)
                 ]
                 save_books_index(entries)
+                index = load_book_index(base_dir, safe_id) or {}
                 trash[_trash_record_key(base_dir, safe_id)] = {
                     "id": safe_id,
                     "original_dir": base_dir,
-                    "title": safe_id,
+                    "title": index.get("title") or safe_id,
                     "folder": dst_name,
                 }
                 removed.append(safe_id)
@@ -1536,6 +1691,17 @@ async def list_trash():
         })
     return {"items": items}
 
+def _available_restore_dir(path: Path) -> Path:
+    """选一个还不存在的目录。目标已存在时不能直接 move，否则会挪进那个目录里面。"""
+    if not path.exists():
+        return path
+    for n in range(2, 1000):
+        cand = path.with_name(f"{path.name}_{n}")
+        if not cand.exists():
+            return cand
+    raise HTTPException(status_code=409, detail="恢复目录已存在")
+
+
 @app.post("/api/books/trash/restore")
 async def restore_trash(id: str = Body(..., embed=True)):
     trash = load_trash_index()
@@ -1550,7 +1716,7 @@ async def restore_trash(id: str = Body(..., embed=True)):
     book_name = info.get("id") or os.path.basename(folder)
     dst = Path(base_dir) / book_name
     if dst.exists():
-        dst = Path(base_dir) / f"{book_name}_restored"
+        dst = _available_restore_dir(Path(base_dir) / f"{book_name}_restored")
     shutil.move(str(src), str(dst))
     add_to_books_index(dst.name, str(Path(base_dir).absolute()), info.get("title", ""))
     trash.pop(id, None)
@@ -1642,6 +1808,10 @@ HTTP_CLIENT = httpx.AsyncClient(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
+    try:
+        flush_reading_progress()
+    except Exception as e:
+        print(f"退出前保存朗读进度失败: {e}")
     try:
         await HTTP_CLIENT.aclose()
         print("✅ 已关闭全局 HTTP 客户端连接池")

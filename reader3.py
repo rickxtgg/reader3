@@ -4,6 +4,7 @@
 
 import os
 import json
+import posixpath
 import shutil
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Optional
@@ -227,6 +228,115 @@ def _unique_image_filename(original_fname: str, seq: int, used: set) -> str:
     return candidate
 
 
+def _norm_epub_path(path: str) -> str:
+    """把 EPUB 内部路径规范成正斜杠、已解码、去掉 ./ 前缀。"""
+    text = unquote(str(path or "")).replace("\\", "/").split("#", 1)[0].split("?", 1)[0].strip()
+    while text.startswith("./"):
+        text = text[2:]
+    return text
+
+
+def _collapse_epub_path(path: str) -> str:
+    """去掉 ./ 和多余的 ..，便于目录相对路径和正文路径对照。"""
+    parts = []
+    for part in _norm_epub_path(path).split("/"):
+        if part in ("", "."):
+            continue
+        if part == "..":
+            if parts:
+                parts.pop()
+            continue
+        parts.append(part)
+    return "/".join(parts)
+
+
+def _resolve_epub_href(base_href: str, src: str) -> str:
+    """按章节文件位置解析相对链接，得到书内路径。"""
+    target = _norm_epub_path(src)
+    if not target or target.startswith(("http://", "https://", "data:", "mailto:")):
+        return ""
+    if target.startswith("/"):
+        normalized = posixpath.normpath(target.lstrip("/"))
+    else:
+        base = _norm_epub_path(base_href)
+        parent = base.rsplit("/", 1)[0] if "/" in base else ""
+        joined = posixpath.join(parent, target) if parent else target
+        normalized = posixpath.normpath(joined)
+    if not normalized or normalized == "." or normalized.startswith("../"):
+        return ""
+    return normalized
+
+
+def _lookup_image(image_map: Dict[str, str], chapter_href: str, src: str) -> str:
+    resolved = _resolve_epub_href(chapter_href, src)
+    if resolved and image_map.get(resolved):
+        return image_map[resolved]
+    raw = _norm_epub_path(src)
+    if raw and image_map.get(raw):
+        return image_map[raw]
+    name = posixpath.basename(resolved or raw)
+    mapped = image_map.get(name) if name else None
+    return mapped or ""
+
+
+def _iter_toc(entries: List[TOCEntry]):
+    for entry in entries or []:
+        yield entry
+        yield from _iter_toc(entry.children)
+
+
+def spine_index_for_href(href: str, hrefs: List[str]) -> Optional[int]:
+    """用完整路径、路径后缀或唯一文件名匹配章节。同名文件不止一个时不猜测。"""
+    target = _collapse_epub_path(href)
+    if not target:
+        return None
+    normed = [_collapse_epub_path(item) for item in hrefs]
+    if target in normed:
+        return normed.index(target)
+    suffix = [
+        i for i, item in enumerate(normed)
+        if item == target or item.endswith("/" + target) or target.endswith("/" + item)
+    ]
+    if len(suffix) == 1:
+        return suffix[0]
+    base = posixpath.basename(target)
+    if not base:
+        return None
+    bases = [i for i, item in enumerate(normed) if posixpath.basename(item) == base]
+    if len(bases) == 1:
+        return bases[0]
+    return None
+
+
+def apply_toc_titles(chapters: List[ChapterContent], toc: List[TOCEntry]) -> None:
+    """用目录标题替换「第 N 节」占位名。同一文件只取最先出现的目录项。"""
+    hrefs = [chapter.href for chapter in chapters]
+    for entry in _iter_toc(toc):
+        title = (entry.title or "").strip()
+        if not title:
+            continue
+        idx = spine_index_for_href(entry.file_href or entry.href, hrefs)
+        if idx is None:
+            continue
+        current = chapters[idx].title or ""
+        if current == f"第 {chapters[idx].order + 1} 节":
+            chapters[idx].title = title
+
+
+def chapter_title_from_toc(book: Book, chapter_index: int) -> str:
+    """已导入的书也能从目录取出章节名，不必重新解析。"""
+    if book is None or chapter_index < 0 or chapter_index >= len(book.spine):
+        return ""
+    hrefs = [chapter.href for chapter in book.spine]
+    for entry in _iter_toc(book.toc):
+        title = (entry.title or "").strip()
+        if not title:
+            continue
+        if spine_index_for_href(entry.file_href or entry.href, hrefs) == chapter_index:
+            return title
+    return book.spine[chapter_index].title or ""
+
+
 def process_epub(epub_path: str, output_dir: str) -> Book:
     """处理 EPUB 文件，返回解析后的 Book 对象。"""
     # 1. 加载书籍
@@ -262,9 +372,9 @@ def process_epub(epub_path: str, output_dir: str) -> Book:
 
             # 映射键使用完整内部路径；仅文件名只在全书唯一时保留
             rel_path = f"images/{safe_fname}"
-            internal = item.get_name().replace("\\", "/")
-            image_map[internal] = rel_path
-            image_map[unquote(internal)] = rel_path
+            internal = _norm_epub_path(item.get_name())
+            if internal:
+                image_map[internal] = rel_path
             if original_fname not in basename_map:
                 basename_map[original_fname] = rel_path
             elif basename_map[original_fname] != rel_path:
@@ -299,19 +409,22 @@ def process_epub(epub_path: str, output_dir: str) -> Book:
             soup = BeautifulSoup(raw_content, 'html.parser')
 
             # A. 修复图片路径
+            chapter_href = item.get_name()
             for img in soup.find_all('img'):
                 src = img.get('src', '')
-                if not src: continue
-
-                # 解码 URL（part01/image%201.jpg -> part01/image 1.jpg）
-                src_decoded = unquote(src).replace("\\", "/")
-                filename = os.path.basename(src_decoded)
-
-                # 尝试在映射中查找
-                if src_decoded in image_map:
-                    img['src'] = image_map[src_decoded]
-                elif filename in image_map:
-                    img['src'] = image_map[filename]
+                if not src:
+                    continue
+                mapped = _lookup_image(image_map, chapter_href, src)
+                if mapped:
+                    img['src'] = mapped
+            for image_tag in soup.find_all('image'):
+                for attr in ('xlink:href', 'href'):
+                    src = image_tag.get(attr, '')
+                    if not src:
+                        continue
+                    mapped = _lookup_image(image_map, chapter_href, src)
+                    if mapped:
+                        image_tag[attr] = mapped
 
             # B. 清理 HTML
             soup = clean_html_content(soup)
@@ -344,6 +457,7 @@ def process_epub(epub_path: str, output_dir: str) -> Book:
         source_file=os.path.basename(epub_path),
         processed_at=datetime.now().isoformat()
     )
+    apply_toc_titles(final_book.spine, final_book.toc)
 
     try:
         save_to_json(final_book, staging)
@@ -368,7 +482,8 @@ def save_to_json(book: Book, output_dir: str):
         'title': book.metadata.title,
         'authors': book.metadata.authors,
         'chapters': len(book.spine),
-        'processed_at': book.processed_at
+        'processed_at': book.processed_at,
+        'source_file': os.path.basename(book.source_file or ''),
     }
     with open(index_path, 'w', encoding='utf-8') as f:
         json.dump(index_data, f, ensure_ascii=False)

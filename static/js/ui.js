@@ -92,7 +92,7 @@
       }
       const infoEl = document.getElementById('para-info');
       const list = window.ttsParagraphs || [];
-      const idx = window.selectedParagraphIndex || -1;
+      const idx = (window.selectedParagraphIndex ?? -1);
       if (infoEl) {
         if (idx >= 0 && list[idx]) {
           infoEl.textContent = `第 ${idx + 1}/${list.length} 段`;
@@ -144,7 +144,7 @@
     } catch {}
   }
 
-  function startHere() {
+  async function startHere() {
     const idx = (window.selectedParagraphIndex ?? -1);
     if (idx < 0) return;
     try {
@@ -152,9 +152,8 @@
       if (panel && !panel.classList.contains('visible')) panel.classList.add('visible');
     } catch {}
     try { if (typeof window.hideParagraphToolbar === 'function') window.hideParagraphToolbar(); } catch {}
-    try { if (typeof window.ttsStop === 'function') window.ttsStop(); } catch {}
-    try { window.ttsCurrentIndex = idx; window.ttsNextPlayIndex = idx; } catch {}
-    try { if (typeof window.ttsPlay === 'function') window.ttsPlay(true, idx >= 0 ? idx : 0); } catch {}
+    try { if (typeof window.ttsStop === 'function') await window.ttsStop(); } catch {}
+    try { if (typeof window.ttsPlay === 'function') await window.ttsPlay(true, idx); } catch {}
   }
 
   function saveProgressHere() {
